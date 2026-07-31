@@ -38,6 +38,8 @@ export const TOKEN_KEYS = [
 export type TokenKey = (typeof TOKEN_KEYS)[number];
 
 export const THEME_STORAGE_KEY = "ragab.dev.theme";
+/** Snapshot of CSS vars for the blocking boot script (belt + suspenders). */
+export const THEME_VARS_STORAGE_KEY = "ragab.dev.theme.vars";
 
 /** Map a loose user string to a known theme name (exact → prefix → includes). */
 export function resolveThemeName(input: string | null | undefined): ThemeName | null {
@@ -63,7 +65,10 @@ export function themeToCssVars(tokens: ThemeTokens): Record<string, string> {
   return vars;
 }
 
-/** Apply palette tokens to an element (defaults to documentElement). */
+/**
+ * Apply palette tokens to an element (defaults to documentElement).
+ * Prefer dataset.theme + CSS for first paint; inline vars keep previews instant.
+ */
 export function applyTheme(
   name: ThemeName,
   target: HTMLElement | null = typeof document !== "undefined" ? document.documentElement : null,
@@ -75,6 +80,16 @@ export function applyTheme(
   }
   target.dataset.theme = name;
   return name;
+}
+
+/** Drop inline overrides so pure [data-theme] CSS owns the surface (optional). */
+export function clearInlineThemeVars(
+  target: HTMLElement | null = typeof document !== "undefined" ? document.documentElement : null,
+): void {
+  if (!target) return;
+  for (const key of TOKEN_KEYS) {
+    target.style.removeProperty(`--${key}`);
+  }
 }
 
 export function pickRandomTheme(exclude?: ThemeName): ThemeName {
@@ -92,7 +107,18 @@ export function loadStoredTheme(): ThemeName {
   return resolveThemeName(raw) ?? DEFAULT_THEME;
 }
 
+/** Theme already stamped on <html> by the blocking boot script (if any). */
+export function readBootTheme(): ThemeName | null {
+  if (typeof document === "undefined") return null;
+  return resolveThemeName(document.documentElement.dataset.theme ?? null);
+}
+
 export function persistTheme(name: ThemeName): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(THEME_STORAGE_KEY, name);
+  // Cache vars for the boot script even if CSS is stale/missing a palette
+  localStorage.setItem(
+    THEME_VARS_STORAGE_KEY,
+    JSON.stringify(themeToCssVars(getTheme(name))),
+  );
 }

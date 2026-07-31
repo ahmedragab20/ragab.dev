@@ -12,7 +12,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -39,11 +39,11 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export type ThemeProviderProps = {
   children: ReactNode;
-  /** Initial theme (defaults to stored or rose-pine). */
+  /** Initial theme (defaults to rose-pine on SSR — storage applied after mount). */
   initialTheme?: ThemeName;
   /** Persist selection to localStorage. */
   persist?: boolean;
-  /** Flash overlay on switch. */
+  /** Flash overlay on intentional switch (not on boot restore). */
   flash?: boolean;
 };
 
@@ -53,19 +53,29 @@ export function ThemeProvider({
   persist = true,
   flash = true,
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<ThemeName>(initialTheme ?? DEFAULT_THEME);
-  const [activeTheme, setActiveTheme] = useState<ThemeName>(initialTheme ?? DEFAULT_THEME);
+  // SSR + first client render MUST match (always default/prop). Reading
+  // localStorage/boot script here caused hydration mismatches (rose-pine vs terafox).
+  const ssrTheme = initialTheme ?? DEFAULT_THEME;
+  const [theme, setThemeState] = useState<ThemeName>(ssrTheme);
+  const [activeTheme, setActiveTheme] = useState<ThemeName>(ssrTheme);
   const [flashOn, setFlashOn] = useState(false);
-  const committedRef = useRef<ThemeName>(initialTheme ?? DEFAULT_THEME);
+  const committedRef = useRef<ThemeName>(ssrTheme);
   const previewingRef = useRef(false);
+  const didBoot = useRef(false);
 
-  useEffect(() => {
+  // Before paint: restore stored theme into React state (colors already set by
+  // the blocking <head> script + [data-theme] CSS — this only syncs the badge).
+  useLayoutEffect(() => {
+    if (didBoot.current) return;
+    didBoot.current = true;
+
     const next = initialTheme ?? loadStoredTheme();
     applyTheme(next);
+    if (persist) persistTheme(next);
     setThemeState(next);
     setActiveTheme(next);
     committedRef.current = next;
-  }, [initialTheme]);
+  }, [initialTheme, persist]);
 
   const flashOnce = useCallback(() => {
     if (!flash) return;
@@ -97,7 +107,6 @@ export function ThemeProvider({
     applyTheme(resolved);
     setActiveTheme(resolved);
     previewingRef.current = true;
-    // no persist, no flash
     return resolved;
   }, []);
 

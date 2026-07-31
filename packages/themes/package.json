@@ -15,8 +15,9 @@
     }
   },
   "scripts": {
+    "gen:css": "node --experimental-strip-types ./scripts/gen-tokens-css.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "build": "tsc --noEmit -p tsconfig.json"
+    "build": "node --experimental-strip-types ./scripts/gen-tokens-css.mjs && tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
