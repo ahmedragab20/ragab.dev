@@ -22,19 +22,5 @@ export const site: SiteConfig = {
     twitter: "x.com/__rgbx",
     linkedin: "linkedin.com/in/ahmed-ragab-bb75541b3",
   },
-  projects: [
-    {
-      name: "ragab.dev",
-      description: "This shell — terminal-first personal space",
-      url: "https://ragab.dev",
-    },
-    {
-      name: "project-alpha",
-      description: "Realtime collaboration layer",
-    },
-    {
-      name: "project-beta",
-      description: "Infrastructure tooling for small teams",
-    },
-  ],
+  projects: [],
 };
