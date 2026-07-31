@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ragab.dev — Split Pane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --sidebar: #111114;
+      --panel: #16161a;
+      --fg: #e4e4e7;
+      --muted: #71717a;
+      --faint: #3f3f46;
+      --line: #27272a;
+      --accent: #f97316;
+      --accent-2: #fb923c;
+      --green: #4ade80;
+      --blue: #60a5fa;
+      --purple: #c084fc;
+      --yellow: #facc15;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      overflow: hidden;
+    }
+
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 36px 1fr 28px;
+      grid-template-columns: 220px 1fr;
+      grid-template-areas:
+        "title title"
+        "side  main"
+        "status status";
+    }
+
+    /* title bar */
+    .titlebar {
+      grid-area: title;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0 0.85rem;
+      background: var(--sidebar);
+      border-bottom: 1px solid var(--line);
+      user-select: none;
+    }
+    .dots { display: flex; gap: 6px; }
+    .dot {
+      width: 11px; height: 11px; border-radius: 50%;
+    }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #febc2e; }
+    .dot.g { background: #28c840; }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-left: 0.5rem;
+      flex: 1;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px 6px 0 0;
+      color: var(--muted);
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      font-size: 12px;
+      white-space: nowrap;
+      transition: color 0.12s, background 0.12s;
+    }
+    .tab:hover { color: var(--fg); background: rgba(255,255,255,0.03); }
+    .tab.active {
+      color: var(--fg);
+      background: var(--panel);
+      border-color: var(--line);
+    }
+    .tab .ext { color: var(--faint); }
+
+    .title-meta {
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    /* sidebar */
+    .sidebar {
+      grid-area: side;
+      background: var(--sidebar);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .side-header {
+      padding: 0.75rem 0.9rem 0.4rem;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--faint);
+      font-weight: 600;
+    }
+
+    .tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.25rem 0.4rem 1rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--faint) transparent;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+      color: var(--muted);
+      user-select: none;
+      transition: background 0.1s, color 0.1s;
+    }
+    .tree-item:hover { background: rgba(255,255,255,0.04); color: var(--fg); }
+    .tree-item.active {
+      background: rgba(249, 115, 22, 0.12);
+      color: var(--accent-2);
+    }
+    .tree-item .icon { width: 1.1em; text-align: center; opacity: 0.85; }
+    .tree-item.folder { color: var(--fg); font-weight: 500; margin-top: 0.35rem; }
+    .tree-item.folder:first-child { margin-top: 0; }
+    .tree-item.nested { padding-left: 1.35rem; }
+
+    .side-footer {
+      border-top: 1px solid var(--line);
+      padding: 0.65rem 0.9rem;
+      font-size: 11px;
+      color: var(--faint);
+    }
+    .side-footer .live {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--muted);
+    }
+    .side-footer .pulse {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(74,222,128,0.6);
+    }
+
+    /* main editor */
+    .main {
+      grid-area: main;
+      background: var(--panel);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .editor {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.75rem 2rem 3rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--faint) transparent;
+    }
+
+    .gutter-wrap {
+      display: grid;
+      grid-template-columns: 2.5rem 1fr;
+      gap: 1rem;
+      max-width: 720px;
+    }
+
+    .gutter {
+      color: var(--faint);
+      text-align: right;
+      font-size: 12px;
+      user-select: none;
+      line-height: 1.7;
+      padding-top: 0.1rem;
+    }
+    .gutter span { display: block; }
+
+    .code {
+      min-width: 0;
+      line-height: 1.7;
+    }
+
+    .view { display: none; animation: in 0.22s ease; }
+    .view.active { display: block; }
+
+    @keyframes in {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .kw { color: var(--purple); }
+    .str { color: var(--green); }
+    .cm { color: var(--faint); font-style: italic; }
+    .fn { color: var(--blue); }
+    .num { color: var(--yellow); }
+    .ty { color: var(--accent-2); }
+    .op { color: var(--muted); }
+
+    h1.display {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 0.5rem;
+    }
+
+    .role {
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .md-body p {
+      color: #c4c4cc;
+      max-width: 52ch;
+      margin-bottom: 0.85rem;
+    }
+    .md-body h2 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.6rem;
+      color: var(--fg);
+    }
+    .md-body ul {
+      list-style: none;
+      margin-bottom: 1rem;
+    }
+    .md-body li {
+      padding: 0.25rem 0;
+      color: #c4c4cc;
+    }
+    .md-body li::before {
+      content: "▸ ";
+      color: var(--accent);
+    }
+    .md-body a {
+      color: var(--accent-2);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+    .md-body a:hover { border-bottom-color: var(--accent); }
+
+    .project-block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.75rem;
+      background: rgba(0,0,0,0.2);
+      transition: border-color 0.15s;
+      cursor: pointer;
+    }
+    .project-block:hover { border-color: var(--faint); }
+    .project-block h3 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .project-block h3 .tag {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px;
+      color: var(--accent);
+      border: 1px solid rgba(249,115,22,0.35);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .project-block p { color: var(--muted); font-size: 12px; margin: 0; }
+
+    .json-line { white-space: pre-wrap; }
+
+    /* terminal panel (bottom of main, optional peek) */
+    .term-peek {
+      border-top: 1px solid var(--line);
+      background: var(--bg);
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .term-peek.collapsed { height: 28px; }
+    .term-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.75rem;
+      height: 28px;
+      font-size: 11px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      user-select: none;
+    }
+    .term-bar:hover { color: var(--fg); }
+    .term-body {
+      flex: 1;
+      overflow: hidden;
+      padding: 0.5rem 0.85rem;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .term-body .ok { color: var(--green); }
+    .term-body .info { color: var(--blue); }
+
+    /* status bar */
+    .statusbar {
+      grid-area: status;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0 0.85rem;
+      background: #1a120c;
+      border-top: 1px solid #3d2a1a;
+      color: var(--accent-2);
+      font-size: 11px;
+      user-select: none;
+    }
+    .statusbar .left, .statusbar .right {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .statusbar .right { margin-left: auto; }
+    .statusbar .sep { opacity: 0.4; }
+
+    .proto-tag {
+      position: fixed;
+      top: 48px;
+      right: 12px;
+      font-size: 10px;
+      color: var(--faint);
+      border: 1px solid var(--line);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(13,13,15,0.9);
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "title"
+          "main"
+          "status";
+      }
+      .sidebar { display: none; }
+      .gutter-wrap { grid-template-columns: 1fr; }
+      .gutter { display: none; }
+      .editor { padding: 1.25rem 1rem 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="proto-tag">prototype D · split pane</div>
+
+  <div class="app">
+    <header class="titlebar">
+      <div class="dots">
+        <span class="dot r"></span>
+        <span class="dot y"></span>
+        <span class="dot g"></span>
+      </div>
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-file="readme.md">readme<span class="ext">.md</span></div>
+        <div class="tab" data-file="about.ts">about<span class="ext">.ts</span></div>
+        <div class="tab" data-file="projects.json">projects<span class="ext">.json</span></div>
+        <div class="tab" data-file="contact.sh">contact<span class="ext">.sh</span></div>
+      </div>
+      <div class="title-meta">ragab.dev</div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="side-header">Explorer</div>
+      <nav class="tree" id="tree">
+        <div class="tree-item folder"><span class="icon">▾</span> ragab.dev</div>
+        <div class="tree-item nested active" data-file="readme.md"><span class="icon">◆</span> readme.md</div>
+        <div class="tree-item nested" data-file="about.ts"><span class="icon">◇</span> about.ts</div>
+        <div class="tree-item nested" data-file="projects.json"><span class="icon">◇</span> projects.json</div>
+        <div class="tree-item nested" data-file="contact.sh"><span class="icon">◇</span> contact.sh</div>
+        <div class="tree-item folder"><span class="icon">▾</span> public</div>
+        <div class="tree-item nested" style="opacity:0.5;cursor:default"><span class="icon">·</span> favicon.svg</div>
+        <div class="tree-item nested" style="opacity:0.5;cursor:default"><span class="icon">·</span> og.png</div>
+      </nav>
+      <div class="side-footer">
+        <div class="live"><span class="pulse"></span> Available · Cairo</div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="editor" id="editor">
+        <!-- readme.md -->
+        <div class="view active" data-file="readme.md">
+          <div class="gutter-wrap">
+            <div class="gutter" aria-hidden="true">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+              <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+              <span>11</span><span>12</span><span>13</span>
+            </div>
+            <div class="code md-body">
+              <h1 class="display">Ahmed Ragab</h1>
+              <p class="role">// software engineer · builder · cairo</p>
+              <p>
+                Minimal systems. Terminal soul. Modern craft.
+                This is my corner of the internet — half portfolio, half playground.
+              </p>
+              <h2>## focus</h2>
+              <ul>
+                <li>product engineering with taste</li>
+                <li>backend & infrastructure</li>
+                <li>interfaces that reward curiosity</li>
+              </ul>
+              <h2>## navigation</h2>
+              <p>
+                Open files in the sidebar, or use the tabs above.
+                Press <span class="kw">1–4</span> to switch views.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- about.ts -->
+        <div class="view" data-file="about.ts">
+          <div class="gutter-wrap">
+            <div class="gutter" aria-hidden="true">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+              <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+              <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+              <span>16</span><span>17</span><span>18</span>
+            </div>
+            <div class="code">
+              <div><span class="cm">// about.ts — identity as code</span></div>
+              <div>&nbsp;</div>
+              <div><span class="kw">export const</span> <span class="ty">person</span> = {</div>
+              <div>  name: <span class="str">"Ahmed Ragab"</span>,</div>
+              <div>  role: <span class="str">"Software Engineer"</span>,</div>
+              <div>  location: <span class="str">"Cairo, EG"</span>,</div>
+              <div>  openToWork: <span class="kw">true</span>,</div>
+              <div>  interests: [</div>
+              <div>    <span class="str">"distributed systems"</span>,</div>
+              <div>    <span class="str">"product craft"</span>,</div>
+              <div>    <span class="str">"terminal aesthetics"</span>,</div>
+              <div>  ],</div>
+              <div>  stack: [<span class="str">"ts"</span>, <span class="str">"go"</span>, <span class="str">"rust"</span>, <span class="str">"react"</span>],</div>
+              <div>} <span class="kw">as const</span>;</div>
+              <div>&nbsp;</div>
+              <div><span class="kw">export function</span> <span class="fn">whoami</span>() {</div>
+              <div>  <span class="kw">return</span> person.name;</div>
+              <div>}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- projects.json -->
+        <div class="view" data-file="projects.json">
+          <div class="md-body" style="max-width:640px">
+            <h1 class="display" style="font-size:1.5rem;margin-bottom:1rem">projects.json</h1>
+            <div class="project-block">
+              <h3>Project Alpha <span class="tag">active</span></h3>
+              <p>Realtime collaboration layer for distributed teams.</p>
+            </div>
+            <div class="project-block">
+              <h3>Project Beta <span class="tag">wip</span></h3>
+              <p>Infrastructure tooling that stays out of the way.</p>
+            </div>
+            <div class="project-block">
+              <h3>ragab.dev <span class="tag">meta</span></h3>
+              <p>This site — exploring terminal-first personal web.</p>
+            </div>
+            <pre class="json-line" style="margin-top:1.5rem;color:var(--muted);font-size:12px"><span class="cm">// raw</span>
+[
+  { <span class="str">"name"</span>: <span class="str">"Alpha"</span>, <span class="str">"status"</span>: <span class="str">"active"</span> },
+  { <span class="str">"name"</span>: <span class="str">"Beta"</span>,  <span class="str">"status"</span>: <span class="str">"wip"</span> },
+  { <span class="str">"name"</span>: <span class="str">"ragab.dev"</span>, <span class="str">"status"</span>: <span class="str">"meta"</span> }
+]</pre>
+          </div>
+        </div>
+
+        <!-- contact.sh -->
+        <div class="view" data-file="contact.sh">
+          <div class="gutter-wrap">
+            <div class="gutter" aria-hidden="true">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+              <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+              <span>11</span>
+            </div>
+            <div class="code">
+              <div><span class="cm">#!/usr/bin/env bash</span></div>
+              <div><span class="cm"># contact.sh — how to reach me</span></div>
+              <div>&nbsp;</div>
+              <div><span class="fn">echo</span> <span class="str">"email:    you@example.com"</span></div>
+              <div><span class="fn">echo</span> <span class="str">"github:   github.com/you"</span></div>
+              <div><span class="fn">echo</span> <span class="str">"twitter:  @you"</span></div>
+              <div><span class="fn">echo</span> <span class="str">"linkedin: /in/you"</span></div>
+              <div>&nbsp;</div>
+              <div><span class="kw">if</span> [[ <span class="str">"$INTERESTING"</span> == <span class="str">"true"</span> ]]; <span class="kw">then</span></div>
+              <div>  <span class="fn">open</span> <span class="str">"mailto:you@example.com"</span></div>
+              <div><span class="kw">fi</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="term-peek" id="term">
+        <div class="term-bar" id="term-bar">
+          <span>▾ TERMINAL · zsh</span>
+          <span style="color:var(--faint)">toggle</span>
+        </div>
+        <div class="term-body">
+          <div><span class="info">$</span> whoami</div>
+          <div class="ok">ahmed</div>
+          <div><span class="info">$</span> pwd</div>
+          <div>~/ragab.dev</div>
+          <div><span class="info">$</span> <span style="animation:blink 1s step-end infinite">_</span></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="statusbar">
+      <div class="left">
+        <span>main*</span>
+        <span class="sep">|</span>
+        <span id="status-file">readme.md</span>
+        <span class="sep">|</span>
+        <span>UTF-8</span>
+      </div>
+      <div class="right">
+        <span id="status-clock">--:--</span>
+        <span class="sep">|</span>
+        <span>Ln 1, Col 1</span>
+        <span class="sep">|</span>
+        <span>TypeScript React</span>
+      </div>
+    </footer>
+  </div>
+
+  <style>
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+
+  <script>
+    const files = ["readme.md", "about.ts", "projects.json", "contact.sh"];
+    let current = "readme.md";
+
+    function openFile(name) {
+      current = name;
+      document.querySelectorAll(".view").forEach((v) => {
+        v.classList.toggle("active", v.dataset.file === name);
+      });
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.file === name);
+      });
+      document.querySelectorAll(".tree-item[data-file]").forEach((t) => {
+        t.classList.toggle("active", t.dataset.file === name);
+      });
+      document.getElementById("status-file").textContent = name;
+    }
+
+    document.getElementById("tabs").addEventListener("click", (e) => {
+      const tab = e.target.closest(".tab");
+      if (tab) openFile(tab.dataset.file);
+    });
+
+    document.getElementById("tree").addEventListener("click", (e) => {
+      const item = e.target.closest(".tree-item[data-file]");
+      if (item) openFile(item.dataset.file);
+    });
+
+    // number keys 1-4
+    document.addEventListener("keydown", (e) => {
+      if (e.target.matches("input, textarea")) return;
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= 4) {
+        e.preventDefault();
+        openFile(files[n - 1]);
+      }
+      // j/k between files
+      if (e.key === "j" || e.key === "k") {
+        const i = files.indexOf(current);
+        const next = e.key === "j"
+          ? Math.min(i + 1, files.length - 1)
+          : Math.max(i - 1, 0);
+        openFile(files[next]);
+      }
+    });
+
+    // terminal toggle
+    const term = document.getElementById("term");
+    document.getElementById("term-bar").addEventListener("click", () => {
+      term.classList.toggle("collapsed");
+    });
+
+    // clock
+    function tick() {
+      document.getElementById("status-clock").textContent =
+        new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo"
+        });
+    }
+    tick();
+    setInterval(tick, 15_000);
+  </script>
+</body>
+</html>

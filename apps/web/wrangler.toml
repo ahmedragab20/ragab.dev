@@ -1,0 +1,11 @@
+# Cloudflare Workers/Pages config for @ragab/web (Astro)
+# Deployed from monorepo root via: pnpm --filter @ragab/web deploy
+name = "ragab-web"
+compatibility_date = "2025-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Astro @astrojs/cloudflare builds into ./dist
+pages_build_output_dir = "dist"
+
+[vars]
+APP_ENV = "production"

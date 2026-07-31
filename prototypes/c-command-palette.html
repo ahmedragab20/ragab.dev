@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ragab.dev — Command Palette</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #111113;
+      --elevated: #18181b;
+      --fg: #fafafa;
+      --muted: #a1a1aa;
+      --faint: #52525b;
+      --line: #27272a;
+      --accent: #22d3ee;
+      --accent-soft: rgba(34, 211, 238, 0.12);
+      --green: #34d399;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Instrument Sans", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      background-image:
+        linear-gradient(rgba(39,39,42,0.4) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(39,39,42,0.4) 1px, transparent 1px);
+      background-size: 48px 48px;
+      background-position: center top;
+    }
+
+    .proto-tag {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      font-family: "Geist Mono", monospace;
+      font-size: 11px;
+      color: var(--faint);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(9,9,11,0.85);
+      z-index: 20;
+    }
+
+    /* main stage */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.25rem 8rem;
+      position: relative;
+    }
+
+    .stage {
+      width: min(640px, 100%);
+      min-height: 280px;
+    }
+
+    .view {
+      display: none;
+      animation: fadeIn 0.28s ease;
+    }
+    .view.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .eyebrow {
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 42ch;
+    }
+
+    .lead strong { color: var(--fg); font-weight: 500; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+    }
+
+    /* cards for projects */
+    .cards {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .card {
+      padding: 1.1rem 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .card:hover {
+      border-color: var(--faint);
+      background: var(--elevated);
+      transform: translateY(-1px);
+    }
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card h3 span { color: var(--accent); font-family: "Geist Mono", monospace; font-size: 12px; }
+    .card p { color: var(--muted); font-size: 0.92rem; }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 1rem;
+    }
+    .chip {
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--surface);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .chip:hover { color: var(--fg); border-color: var(--faint); }
+
+    .contact-list {
+      list-style: none;
+      margin-top: 0.5rem;
+    }
+    .contact-list li {
+      display: flex;
+      gap: 1rem;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--line);
+      font-family: "Geist Mono", monospace;
+      font-size: 14px;
+    }
+    .contact-list li:last-child { border-bottom: none; }
+    .contact-list .k { color: var(--faint); width: 5rem; }
+    .contact-list .v { color: var(--fg); }
+    .contact-list a { color: var(--accent); text-decoration: none; }
+    .contact-list a:hover { text-decoration: underline; }
+
+    /* bottom command bar */
+    .cmdbar-wrap {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      padding: 0 1rem 1.25rem;
+      background: linear-gradient(transparent, var(--bg) 40%);
+      z-index: 30;
+    }
+
+    .cmdbar {
+      max-width: 560px;
+      margin: 0 auto;
+      background: var(--elevated);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.4),
+        0 20px 50px rgba(0,0,0,0.55),
+        0 0 40px rgba(34, 211, 238, 0.04);
+      overflow: hidden;
+    }
+
+    .cmdbar-input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cmdbar-input-row .prompt {
+      font-family: "Geist Mono", monospace;
+      color: var(--accent);
+      font-size: 14px;
+      user-select: none;
+    }
+
+    #palette {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--fg);
+      font-family: "Geist Mono", monospace;
+      font-size: 14px;
+      caret-color: var(--accent);
+    }
+    #palette::placeholder { color: var(--faint); }
+
+    .cmdbar-hint {
+      font-family: "Geist Mono", monospace;
+      font-size: 11px;
+      color: var(--faint);
+      display: flex;
+      gap: 0.75rem;
+      padding: 0 0.25rem;
+    }
+    .cmdbar-hint kbd {
+      border: 1px solid var(--line);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--muted);
+    }
+
+    .suggestions {
+      max-height: 240px;
+      overflow-y: auto;
+      padding: 0.35rem;
+    }
+
+    .sug {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: "Geist Mono", monospace;
+      font-size: 13px;
+      color: var(--muted);
+      transition: background 0.1s, color 0.1s;
+    }
+    .sug:hover, .sug.active {
+      background: var(--accent-soft);
+      color: var(--fg);
+    }
+    .sug .cmd { color: var(--fg); min-width: 7rem; }
+    .sug .desc { color: var(--faint); flex: 1; }
+    .sug.active .desc { color: var(--muted); }
+    .sug .key {
+      font-size: 11px;
+      color: var(--faint);
+      border: 1px solid var(--line);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .empty {
+      padding: 0.75rem 1rem;
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      color: var(--faint);
+    }
+
+    .boot-tip {
+      position: fixed;
+      bottom: 6.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      color: var(--faint);
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 0.4s;
+      z-index: 25;
+    }
+    .boot-tip.hidden { opacity: 0; }
+
+    @media (max-width: 520px) {
+      .sug .key { display: none; }
+      .sug .cmd { min-width: 5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="proto-tag">prototype C · command palette</div>
+
+  <main>
+    <div class="stage">
+      <!-- home -->
+      <section class="view active" data-view="home">
+        <div class="eyebrow">~/ragab.dev</div>
+        <h1>Ahmed Ragab</h1>
+        <p class="lead">
+          Software engineer. I build <strong>minimal</strong> systems with
+          <strong>terminal soul</strong> and modern product craft.
+        </p>
+        <div class="status-pill">
+          <span class="dot"></span>
+          <span id="clock-home">Available · Cairo</span>
+        </div>
+      </section>
+
+      <!-- about -->
+      <section class="view" data-view="about">
+        <div class="eyebrow">about</div>
+        <h1>Who I am</h1>
+        <p class="lead">
+          Engineer from Egypt. Obsessed with clarity — in code, interfaces,
+          and the systems that connect them. I like tools that feel inevitable.
+        </p>
+        <p class="lead" style="margin-top:1rem">
+          Currently exploring distributed systems, product design, and
+          interfaces that reward curiosity.
+        </p>
+      </section>
+
+      <!-- work -->
+      <section class="view" data-view="work">
+        <div class="eyebrow">work</div>
+        <h1>Selected projects</h1>
+        <div class="cards">
+          <a class="card" href="#">
+            <h3>Project Alpha <span>→</span></h3>
+            <p>Realtime collaboration for distributed teams.</p>
+          </a>
+          <a class="card" href="#">
+            <h3>Project Beta <span>→</span></h3>
+            <p>Infra tooling that stays out of the way.</p>
+          </a>
+          <a class="card" href="#">
+            <h3>ragab.dev <span>→</span></h3>
+            <p>This experiment — terminal-first personal site.</p>
+          </a>
+        </div>
+      </section>
+
+      <!-- stack -->
+      <section class="view" data-view="stack">
+        <div class="eyebrow">stack</div>
+        <h1>What I use</h1>
+        <p class="lead">Languages, frameworks, and tools I reach for most.</p>
+        <div class="chip-row">
+          <span class="chip">TypeScript</span>
+          <span class="chip">Go</span>
+          <span class="chip">Rust</span>
+          <span class="chip">React</span>
+          <span class="chip">Next.js</span>
+          <span class="chip">Node</span>
+          <span class="chip">Postgres</span>
+          <span class="chip">Redis</span>
+          <span class="chip">Docker</span>
+          <span class="chip">AWS</span>
+          <span class="chip">Neovim</span>
+        </div>
+      </section>
+
+      <!-- contact -->
+      <section class="view" data-view="contact">
+        <div class="eyebrow">contact</div>
+        <h1>Let's talk</h1>
+        <p class="lead">Open to collaborations, interesting problems, and good coffee (remote counts).</p>
+        <ul class="contact-list">
+          <li><span class="k">email</span><span class="v"><a href="mailto:you@example.com">you@example.com</a></span></li>
+          <li><span class="k">github</span><span class="v"><a href="#">github.com/you</a></span></li>
+          <li><span class="k">twitter</span><span class="v"><a href="#">@you</a></span></li>
+          <li><span class="k">linkedin</span><span class="v"><a href="#">/in/you</a></span></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <div class="boot-tip" id="boot-tip">press <strong style="color:var(--muted)">⌘K</strong> or start typing · try <strong style="color:var(--muted)">work</strong></div>
+
+  <div class="cmdbar-wrap">
+    <div class="cmdbar">
+      <div class="cmdbar-input-row">
+        <span class="prompt">›</span>
+        <input id="palette" type="text" placeholder="Type a command… (home, about, work, stack, contact)" autocomplete="off" spellcheck="false" />
+        <div class="cmdbar-hint"><kbd>↵</kbd><kbd>esc</kbd></div>
+      </div>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+  </div>
+
+  <script>
+    const COMMANDS = [
+      { id: "home",    aliases: ["home", "index", "~", "cd"], desc: "Back to home", key: "h" },
+      { id: "about",   aliases: ["about", "whoami", "me", "bio"], desc: "Who I am", key: "a" },
+      { id: "work",    aliases: ["work", "projects", "portfolio"], desc: "Selected projects", key: "w" },
+      { id: "stack",   aliases: ["stack", "tech", "skills"], desc: "Tools & languages", key: "s" },
+      { id: "contact", aliases: ["contact", "email", "connect", "hi"], desc: "Get in touch", key: "c" },
+    ];
+
+    const input = document.getElementById("palette");
+    const suggestions = document.getElementById("suggestions");
+    const tip = document.getElementById("boot-tip");
+    let activeIdx = 0;
+    let filtered = [...COMMANDS];
+    let tipHidden = false;
+
+    function hideTip() {
+      if (tipHidden) return;
+      tipHidden = true;
+      tip.classList.add("hidden");
+    }
+
+    function navigate(id) {
+      document.querySelectorAll(".view").forEach((v) => {
+        v.classList.toggle("active", v.dataset.view === id);
+      });
+      input.value = "";
+      renderSuggestions("");
+      hideTip();
+    }
+
+    function matchScore(cmd, q) {
+      if (!q) return 1;
+      const ql = q.toLowerCase();
+      for (const a of cmd.aliases) {
+        if (a === ql) return 100;
+        if (a.startsWith(ql)) return 50 + (ql.length / a.length) * 20;
+        if (a.includes(ql)) return 20;
+      }
+      if (cmd.desc.toLowerCase().includes(ql)) return 10;
+      return 0;
+    }
+
+    function renderSuggestions(q) {
+      filtered = COMMANDS
+        .map((c) => ({ c, s: matchScore(c, q) }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .map((x) => x.c);
+
+      activeIdx = 0;
+
+      if (!filtered.length) {
+        suggestions.innerHTML = `<div class="empty">no match for “${escapeHtml(q)}” — try home, work, contact</div>`;
+        return;
+      }
+
+      suggestions.innerHTML = filtered.map((c, i) => `
+        <div class="sug ${i === 0 ? "active" : ""}" data-id="${c.id}" role="option">
+          <span class="cmd">${c.aliases[0]}</span>
+          <span class="desc">${c.desc}</span>
+          <span class="key">${c.key}</span>
+        </div>
+      `).join("");
+
+      suggestions.querySelectorAll(".sug").forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+          activeIdx = filtered.findIndex((c) => c.id === el.dataset.id);
+          highlight();
+        });
+        el.addEventListener("click", () => navigate(el.dataset.id));
+      });
+    }
+
+    function highlight() {
+      suggestions.querySelectorAll(".sug").forEach((el, i) => {
+        el.classList.toggle("active", i === activeIdx);
+      });
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[c]);
+    }
+
+    input.addEventListener("input", () => {
+      hideTip();
+      renderSuggestions(input.value.trim());
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, filtered.length - 1);
+        highlight();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, 0);
+        highlight();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (filtered[activeIdx]) navigate(filtered[activeIdx].id);
+      } else if (e.key === "Escape") {
+        input.value = "";
+        renderSuggestions("");
+        input.blur();
+      }
+    });
+
+    // Global shortcuts
+    document.addEventListener("keydown", (e) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        input.focus();
+        input.select();
+        hideTip();
+        return;
+      }
+      // single-letter nav when not typing
+      if (document.activeElement !== input && !meta && !e.altKey) {
+        const hit = COMMANDS.find((c) => c.key === e.key.toLowerCase());
+        if (hit) {
+          e.preventDefault();
+          navigate(hit.id);
+        }
+      }
+      // focus palette on /
+      if (e.key === "/" && document.activeElement !== input) {
+        e.preventDefault();
+        input.focus();
+      }
+    });
+
+    // Clock
+    function tick() {
+      const t = new Date().toLocaleTimeString("en-GB", {
+        hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo"
+      });
+      const el = document.getElementById("clock-home");
+      if (el) el.textContent = `Available · ${t} Cairo`;
+    }
+    tick();
+    setInterval(tick, 20_000);
+
+    renderSuggestions("");
+    // soft auto-focus after a beat
+    setTimeout(() => input.focus(), 400);
+  </script>
+</body>
+</html>

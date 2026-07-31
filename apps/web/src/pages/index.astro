@@ -1,0 +1,18 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { TerminalApp } from "../components/TerminalApp";
+import { loadTerminalContent } from "../lib/content";
+
+const { blogs, announcements } = await loadTerminalContent();
+---
+
+<BaseLayout title="ragab.dev — terminal">
+  <main style="height: 100%">
+    <TerminalApp
+      client:load
+      blogs={blogs}
+      announcements={announcements}
+      boot={{ mode: "home" }}
+    />
+  </main>
+</BaseLayout>

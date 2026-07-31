@@ -1,0 +1,60 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { TerminalApp } from "../../components/TerminalApp";
+import { loadTerminalContent } from "../../lib/content";
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const { blogs } = await loadTerminalContent();
+  return blogs.map((post) => ({
+    params: { slug: post.slug },
+    props: { slug: post.slug, title: post.title, excerpt: post.excerpt },
+  }));
+}
+
+const { slug, title, excerpt } = Astro.props;
+const { blogs, announcements } = await loadTerminalContent();
+const post = blogs.find((b) => b.slug === slug);
+---
+
+<BaseLayout
+  title={`${title ?? slug} — ragab.dev`}
+  description={excerpt ?? "Blog post"}
+>
+  <main style="height: 100%">
+    <TerminalApp
+      client:load
+      blogs={blogs}
+      announcements={announcements}
+      boot={{ mode: "blog", slug }}
+    />
+  </main>
+</BaseLayout>
+
+{
+  /* Ensure prerender has content for SEO crawlers that ignore JS */
+}
+{
+  post && (
+    <article class="sr-only" aria-hidden="true">
+      <h1>{post.title}</h1>
+      <time>{post.date}</time>
+      <pre>{post.body}</pre>
+    </article>
+  )
+}
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

@@ -1,0 +1,29 @@
+---
+title: Notes on small-team infrastructure
+excerpt: Boring platforms, sharp edges only where they pay.
+date: 2026-05-11
+tags:
+  - infra
+  - engineering
+draft: false
+---
+
+Small teams don't need platform-team cosplay. They need:
+
+- boring defaults
+- good observability
+- the courage to delete
+
+## A minimal shape
+
+```toml
+# wrangler.toml — edge API later, not day-zero complexity
+name = "ragab-api"
+compatibility_date = "2025-07-01"
+```
+
+<Callout type="warn">
+This post is a living stub. Expand when there's a real war story worth telling.
+</Callout>
+
+External reading: [The Twelve-Factor App](https://12factor.net/).

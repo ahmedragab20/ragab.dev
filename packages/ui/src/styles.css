@@ -1,0 +1,1176 @@
+@import "@ragab/themes/css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.ragab-reset {
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Primitives ── */
+
+.ragab-text {
+  font-family: var(--font-mono);
+  line-height: var(--leading);
+  color: var(--fg);
+}
+
+.ragab-text--xs {
+  font-size: var(--text-xs);
+}
+.ragab-text--sm {
+  font-size: var(--text-sm);
+}
+.ragab-text--base {
+  font-size: var(--text-base);
+}
+.ragab-text--md {
+  font-size: var(--text-md);
+}
+
+.ragab-text--dim {
+  color: var(--dim);
+}
+.ragab-text--muted {
+  color: var(--muted);
+}
+.ragab-text--bright {
+  color: var(--bright);
+}
+.ragab-text--accent {
+  color: var(--accent);
+}
+.ragab-text--gold {
+  color: var(--gold);
+}
+.ragab-text--foam {
+  color: var(--foam);
+}
+.ragab-text--love {
+  color: var(--love);
+}
+.ragab-text--ok {
+  color: var(--ok);
+}
+.ragab-text--err {
+  color: var(--err);
+}
+
+.ragab-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  border: var(--border-w, 1px) solid var(--border);
+  padding: 1px 5px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.ragab-badge {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--bright);
+  border: var(--border-w, 1px) solid var(--border);
+  padding: 2px 8px;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition:
+    color var(--dur-med) var(--ease-out),
+    border-color var(--dur-med) var(--ease-out);
+}
+
+.ragab-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.ragab-dot--r {
+  background: var(--love);
+  opacity: 0.9;
+}
+.ragab-dot--y {
+  background: var(--gold);
+  opacity: 0.9;
+}
+.ragab-dot--g {
+  background: var(--ok);
+  opacity: 0.85;
+}
+.ragab-dot--idle {
+  background: var(--border);
+}
+
+/* ── Shell chrome ── */
+
+.ragab-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 280px;
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: var(--leading);
+  color: var(--fg);
+  background: var(--bg);
+  animation: ragab-shell-in var(--dur-slow) var(--ease-out) both;
+}
+
+.ragab-shell--fill {
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+}
+
+/* Gradients are banned in the design system — shell is a flat --bg fill only. */
+
+.ragab-shell__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+@keyframes ragab-shell-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ragab-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--dim);
+  font-size: var(--text-sm);
+  letter-spacing: 0.03em;
+  margin-bottom: 0.9rem;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.ragab-titlebar__dots {
+  display: flex;
+  gap: 6px;
+}
+
+.ragab-titlebar__path {
+  flex: 1;
+  text-align: left;
+  color: var(--dim);
+  min-width: 0;
+}
+
+.ragab-titlebar__path strong {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.ragab-titlebar__end {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.ragab-output {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+  min-height: 0;
+  cursor: text;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+
+.ragab-output a {
+  cursor: pointer;
+}
+
+.ragab-output::-webkit-scrollbar {
+  width: 10px;
+}
+.ragab-output::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ragab-output::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 0;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.ragab-output::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+  background-clip: padding-box;
+}
+
+.ragab-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 1px;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  color: var(--fg);
+  border: none;
+  background: transparent;
+  text-align: left;
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+}
+
+.ragab-line--animate {
+  animation: ragab-line-in var(--dur-med) var(--ease-out) both;
+}
+
+.ragab-line--indent {
+  padding-left: 1.1em;
+}
+
+/* Clickable output rows (commands, blogs, settings toggles) */
+.ragab-line--action,
+.ragab-line--link {
+  cursor: pointer;
+  border-radius: 0;
+  padding: 0.1em 0.35em;
+  margin-left: -0.35em;
+  margin-right: -0.35em;
+  width: calc(100% + 0.7em);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.ragab-line--action:hover,
+.ragab-line--link:hover {
+  background: color-mix(in srgb, var(--bright) 10%, transparent);
+}
+
+.ragab-line--action:focus,
+.ragab-line--link:focus,
+.ragab-line--action:focus-visible,
+.ragab-line--link:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--bright) 14%, transparent);
+  box-shadow: inset 1px 0 0 0 var(--accent);
+}
+
+.ragab-line--link {
+  color: var(--foam);
+  text-decoration: none;
+}
+
+.ragab-line--link:hover {
+  color: var(--bright);
+}
+
+@keyframes ragab-line-in {
+  from {
+    opacity: 0;
+    transform: translateX(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ragab-prompt-row {
+  display: flex;
+  align-items: center;
+  margin-top: 0.45rem;
+  padding-top: 0.55rem;
+  flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.ragab-prompt {
+  white-space: nowrap;
+  user-select: none;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.ragab-prompt__user {
+  color: var(--accent);
+}
+.ragab-prompt__at,
+.ragab-prompt__sep {
+  color: var(--dim);
+}
+.ragab-prompt__host {
+  color: var(--foam);
+}
+.ragab-prompt__dir {
+  color: var(--gold);
+}
+
+/* Input cluster: mirror + cursor + ghost suggest; real input overlaid */
+.ragab-prompt-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 1.3em;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ragab-input-mirror {
+  white-space: pre;
+  color: var(--fg);
+  pointer-events: none;
+  font: inherit;
+}
+
+/* Shell-style token colors in the prompt mirror */
+.ragab-input-tok--cmd {
+  color: var(--foam);
+  font-weight: 600;
+}
+.ragab-input-tok--unknown {
+  color: var(--love);
+}
+.ragab-input-tok--arg {
+  color: var(--gold);
+}
+.ragab-input-tok--flag {
+  color: var(--accent);
+}
+
+.ragab-suggest {
+  white-space: pre;
+  color: var(--dim);
+  opacity: 0.55;
+  font: inherit;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ragab-suggest:hover {
+  opacity: 0.85;
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 2px;
+}
+
+.ragab-suggest-accept {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--dim);
+  background: transparent;
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  padding: 2px 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ragab-suggest-accept:hover {
+  color: var(--fg);
+  border-color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+}
+
+.ragab-hint-cmd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  border: var(--border-w, 1px) solid var(--border);
+  padding: 2px 7px;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast),
+    border-color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.ragab-hint-cmd:hover {
+  color: var(--fg);
+  border-color: var(--bright);
+  background: color-mix(in srgb, var(--bright) 10%, transparent);
+}
+
+.ragab-hint-sep {
+  color: var(--dim);
+  user-select: none;
+}
+
+.ragab-hint-note {
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.ragab-dock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+  flex-shrink: 0;
+}
+
+.ragab-dock__btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--panel);
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast),
+    border-color var(--dur-fast),
+    background var(--dur-fast),
+    transform var(--dur-fast);
+}
+
+.ragab-dock__btn:hover {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--bright) 45%, var(--border));
+  background: color-mix(in srgb, var(--bright) 8%, var(--panel));
+}
+
+.ragab-dock__btn:active {
+  transform: translateY(1px);
+}
+
+.ragab-dock__btn--primary {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.ragab-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: transparent;
+  font: inherit;
+  font-family: var(--font-mono);
+  caret-color: transparent;
+  padding: 0;
+  margin: 0;
+  /* Keep text selection invisible — mirror shows the text */
+  -webkit-text-fill-color: transparent;
+}
+
+.ragab-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.15em;
+  background: var(--cursor);
+  margin-left: 1px;
+  flex-shrink: 0;
+  vertical-align: text-bottom;
+  border-radius: 0;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.ragab-vim-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--bg);
+  background: var(--foam);
+  border-radius: 0;
+  padding: 1px 5px;
+  margin-right: 0.45rem;
+  flex-shrink: 0;
+  user-select: none;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-mono);
+}
+
+.ragab-vim-badge--normal {
+  background: var(--gold);
+}
+
+.ragab-vim-badge:hover {
+  filter: brightness(1.08);
+}
+
+.ragab-hint {
+  margin-top: 0.65rem;
+  color: var(--dim);
+  font-size: 0.72rem;
+  user-select: none;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.ragab-theme-flash {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bright);
+  opacity: 0;
+  z-index: 60;
+  transition: opacity 50ms linear;
+}
+
+.ragab-theme-flash--on {
+  opacity: 0.06;
+  transition: none;
+}
+
+/* ── Terminal toasts (bottom-right, config-reload vibe) ── */
+
+.ragab-toasts {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 80;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.45rem;
+  max-width: min(320px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.ragab-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--fg);
+  background: var(--panel);
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  padding: 0.55rem 0.75rem;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.ragab-toast__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 0.3em;
+  flex-shrink: 0;
+  background: var(--foam);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--foam) 50%, transparent);
+}
+
+.ragab-toast--ok .ragab-toast__dot {
+  background: var(--ok);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 50%, transparent);
+}
+.ragab-toast--warn .ragab-toast__dot {
+  background: var(--gold);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--gold) 50%, transparent);
+}
+.ragab-toast--err .ragab-toast__dot {
+  background: var(--err);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--err) 50%, transparent);
+}
+
+.ragab-toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ragab-toast__title {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.ragab-toast__detail {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.ragab-shell-stage {
+  height: 100%;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: stretch;
+  background: var(--bg);
+}
+
+.ragab-settings-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  background: transparent;
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-left: 0.35rem;
+}
+.ragab-settings-btn:hover {
+  color: var(--fg);
+  border-color: var(--faint, var(--dim));
+}
+
+/* ── Tab completion popup (TUI panel: 1px border, square) ── */
+
+.ragab-prompt-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.ragab-completion {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 40;
+  max-height: min(320px, 45vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.ragab-completion__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border-bottom: var(--border-w, 1px) solid var(--border);
+  font-size: 11px;
+  user-select: none;
+  background: color-mix(in srgb, var(--bg) 55%, var(--panel));
+}
+
+.ragab-completion__title {
+  color: var(--bright);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.ragab-completion__title::before {
+  content: "┌ ";
+  color: var(--dim);
+}
+
+.ragab-completion__meta {
+  color: var(--dim);
+  flex: 1;
+}
+
+.ragab-completion__close {
+  border: var(--border-w, 1px) solid transparent;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 6px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+}
+.ragab-completion__close:hover {
+  color: var(--fg);
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.ragab-completion__list {
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+
+.ragab-completion__item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  border-bottom: var(--border-w, 1px) solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 0;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+}
+
+.ragab-completion__item:last-child {
+  border-bottom: none;
+}
+
+.ragab-completion__item:hover,
+.ragab-completion__item--active {
+  background: color-mix(in srgb, var(--bright) 12%, var(--bg));
+}
+
+.ragab-completion__item--active {
+  box-shadow: inset 1px 0 0 0 var(--accent);
+}
+
+.ragab-completion__label {
+  color: var(--fg);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ragab-completion__item--foam .ragab-completion__label {
+  color: var(--foam);
+}
+.ragab-completion__item--gold .ragab-completion__label {
+  color: var(--gold);
+}
+.ragab-completion__item--accent .ragab-completion__label {
+  color: var(--accent);
+}
+.ragab-completion__item--bright .ragab-completion__label {
+  color: var(--bright);
+}
+.ragab-completion__item--ok .ragab-completion__label {
+  color: var(--ok);
+}
+.ragab-completion__item--love .ragab-completion__label {
+  color: var(--love);
+}
+.ragab-completion__item--muted .ragab-completion__label {
+  color: var(--muted);
+}
+
+.ragab-completion__detail {
+  color: var(--dim);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 42ch;
+}
+
+.ragab-completion__run {
+  display: none; /* chooser fills input only — no auto-exec glyph */
+}
+
+/* Colorful prompt echo in output */
+.ragab-echo {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  margin-bottom: 1px;
+}
+.ragab-echo__user {
+  color: var(--accent);
+}
+.ragab-echo__at,
+.ragab-echo__sep {
+  color: var(--dim);
+}
+.ragab-echo__host {
+  color: var(--foam);
+}
+.ragab-echo__dir {
+  color: var(--gold);
+}
+.ragab-echo__cmd {
+  color: var(--fg);
+}
+
+/* Minimal output highlighting (command results) */
+.ragab-hl--cmd {
+  color: var(--foam);
+}
+.ragab-hl--on {
+  color: var(--ok);
+}
+.ragab-hl--off {
+  color: var(--love);
+}
+.ragab-hl--arrow {
+  color: var(--accent);
+}
+.ragab-hl--tag {
+  color: var(--bright);
+}
+.ragab-hl--path {
+  color: var(--gold);
+}
+.ragab-hl--dim {
+  color: var(--dim);
+}
+
+/* When a whole line has a tone, keep hl spans slightly distinct but quiet */
+.ragab-text--muted .ragab-hl--cmd,
+.ragab-text--dim .ragab-hl--cmd {
+  color: var(--foam);
+  opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ragab-shell,
+  .ragab-line--animate {
+    animation: none !important;
+  }
+
+  .ragab-shell {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Terminal prose (MD/MDX body) ── */
+
+.ragab-prose {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  color: var(--fg);
+  max-width: 72ch;
+  animation: ragab-line-in var(--dur-med) var(--ease-out) both;
+}
+
+.ragab-prose__loading {
+  color: var(--dim);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
+}
+
+.ragab-prose__error {
+  color: var(--err);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
+  border: var(--border-w, 1px) solid color-mix(in srgb, var(--err) 35%, transparent);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 0;
+}
+
+.ragab-prose__fallback {
+  white-space: pre-wrap;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.ragab-prose__p {
+  margin: 0 0 0.85em;
+  color: #d4d4dc;
+}
+
+.ragab-prose__h {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--bright);
+  margin: 1.25em 0 0.5em;
+  line-height: 1.3;
+}
+
+.ragab-prose__h1 {
+  font-size: 1.15rem;
+}
+.ragab-prose__h2 {
+  font-size: 1.05rem;
+}
+.ragab-prose__h3 {
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.ragab-prose__hash {
+  color: var(--dim);
+  font-weight: 500;
+  user-select: none;
+}
+
+.ragab-prose__a {
+  color: var(--foam);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--dim);
+  transition:
+    color var(--dur-fast),
+    border-color var(--dur-fast);
+}
+
+.ragab-prose__a:hover {
+  color: var(--bright);
+  border-bottom-style: solid;
+}
+
+.ragab-prose__ext {
+  margin-left: 0.2em;
+  font-size: 0.85em;
+  color: var(--dim);
+}
+
+.ragab-prose__ul,
+.ragab-prose__ol {
+  margin: 0 0 0.85em;
+  padding-left: 0;
+  list-style: none;
+}
+
+.ragab-prose__li {
+  position: relative;
+  padding-left: 1.25em;
+  margin: 0.25em 0;
+  color: #c8c8d0;
+}
+
+.ragab-prose__ul > .ragab-prose__li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.ragab-prose__ol {
+  counter-reset: prose-ol;
+}
+.ragab-prose__ol > .ragab-prose__li {
+  counter-increment: prose-ol;
+}
+.ragab-prose__ol > .ragab-prose__li::before {
+  content: counter(prose-ol) ".";
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+  font-size: 0.9em;
+}
+
+.ragab-prose__bq {
+  margin: 0.85em 0;
+  padding: 0.5em 0 0.5em 0.9em;
+  border-left: 2px solid var(--pine);
+  color: var(--muted);
+}
+
+.ragab-prose__bq .ragab-prose__p {
+  color: var(--muted);
+  margin-bottom: 0.4em;
+}
+
+.ragab-prose__hr {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 1.25em 0;
+}
+
+.ragab-prose__strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.ragab-prose__em {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.ragab-prose__code-inline {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: var(--border-w, 1px) solid var(--border);
+  padding: 0.05em 0.35em;
+  border-radius: 0;
+}
+
+.ragab-prose__pre,
+.ragab-prose__shiki {
+  margin: 0.85em 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--panel);
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.ragab-prose__shiki pre {
+  margin: 0;
+  background: transparent !important;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.ragab-prose__shiki code {
+  font-family: var(--font-mono);
+  font-size: inherit;
+}
+
+.ragab-prose__figure {
+  margin: 1em 0;
+}
+
+.ragab-prose__img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  background: var(--panel);
+}
+
+.ragab-prose__caption {
+  margin-top: 0.4em;
+  font-size: var(--text-xs);
+  color: var(--dim);
+}
+
+.ragab-prose__table-wrap {
+  overflow-x: auto;
+  margin: 0.85em 0;
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+}
+
+.ragab-prose__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.ragab-prose__table th,
+.ragab-prose__table td {
+  padding: 0.45em 0.7em;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.ragab-prose__table th {
+  color: var(--bright);
+  background: var(--panel);
+}
+
+.ragab-prose__table td {
+  color: var(--muted);
+}
+
+.ragab-prose__embed {
+  margin: 1em 0;
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.ragab-prose__embed-label {
+  font-size: var(--text-xs);
+  color: var(--dim);
+  padding: 0.35rem 0.65rem;
+  border-bottom: var(--border-w, 1px) solid var(--border);
+  letter-spacing: 0.04em;
+}
+
+.ragab-prose__embed-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.ragab-prose__embed-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.ragab-prose__callout {
+  margin: 0.85em 0;
+  border: var(--border-w, 1px) solid var(--border);
+  border-radius: 0;
+  padding: 0.65rem 0.8rem;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+}
+
+.ragab-prose__callout--note {
+  border-color: color-mix(in srgb, var(--foam) 40%, var(--border));
+}
+.ragab-prose__callout--tip {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+}
+.ragab-prose__callout--warn {
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--border));
+}
+
+.ragab-prose__callout-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  margin-bottom: 0.35rem;
+}
+
+.ragab-prose__callout-body .ragab-prose__p:last-child {
+  margin-bottom: 0;
+}
+
+.ragab-article {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.ragab-article__meta {
+  color: var(--dim);
+  font-size: var(--text-sm);
+  margin-bottom: 0.35rem;
+}
+
+.ragab-article__rule {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 0.5rem 0 0.85rem;
+}

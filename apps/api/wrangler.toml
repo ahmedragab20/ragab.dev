@@ -1,0 +1,10 @@
+name = "ragab-api"
+main = "src/index.ts"
+compatibility_date = "2025-07-01"
+
+[vars]
+APP_NAME = "ragab.dev"
+APP_ENV = "production"
+
+# Optional: bind custom domain in Cloudflare dashboard → Workers → ragab-api → Triggers
+# e.g. api.ragab.dev

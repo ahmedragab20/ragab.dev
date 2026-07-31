@@ -1,0 +1,40 @@
+{
+  "name": "ragab.dev",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.1",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @ragab/web --filter @ragab/api dev",
+    "dev:web": "pnpm --filter @ragab/web dev",
+    "dev:api": "pnpm --filter @ragab/api dev",
+    "dev:ui": "pnpm --filter @ragab/ui storybook",
+    "build": "pnpm -r --filter=./packages/* build && pnpm --filter @ragab/web build && pnpm --filter @ragab/api build",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "check": "pnpm lint && pnpm fmt:check && pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck",
+    "storybook": "pnpm --filter @ragab/ui storybook",
+    "build-storybook": "pnpm --filter @ragab/ui build-storybook",
+    "deploy": "pnpm deploy:web && pnpm deploy:api",
+    "deploy:web": "pnpm --filter @ragab/web deploy",
+    "deploy:api": "pnpm --filter @ragab/api deploy",
+    "ci": "pnpm lint && pnpm --filter @ragab/web build"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.61.0",
+    "oxlint": "^1.76.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
+}

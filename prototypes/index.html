@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ragab.dev — Prototypes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #070708;
+      --fg: #f4f4f5;
+      --muted: #a1a1aa;
+      --faint: #52525b;
+      --line: #27272a;
+      --card: #111113;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 70% 40% at 50% -10%, rgba(167,139,250,0.1), transparent 55%),
+        var(--bg);
+      color: var(--fg);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      padding: 3rem 1.25rem 4rem;
+    }
+
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2.5rem;
+    }
+
+    header .eyebrow {
+      color: #a78bfa;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-family: "Syne", sans-serif;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+
+    .lead {
+      color: var(--muted);
+      max-width: 52ch;
+      font-size: 14px;
+    }
+
+    .principles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 1.25rem;
+    }
+
+    .principles span {
+      font-size: 11px;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    a.card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 1.25rem;
+      align-items: start;
+      padding: 1.35rem 1.4rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.15s, background 0.15s;
+    }
+
+    a.card:hover {
+      border-color: #3f3f46;
+      background: #161618;
+      transform: translateY(-2px);
+    }
+
+    .letter {
+      font-family: "Syne", sans-serif;
+      font-weight: 800;
+      font-size: 1.75rem;
+      line-height: 1;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+
+    .card.a .letter { color: #4ade80; background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.25); }
+    .card.b .letter { color: #a78bfa; background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.25); }
+    .card.c .letter { color: #22d3ee; background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.25); }
+    .card.d .letter { color: #fb923c; background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.25); }
+    .card.e .letter { color: #a78bfa; background: rgba(124,106,247,0.12); border-color: rgba(124,106,247,0.35); }
+
+    .body h2 {
+      font-family: "Syne", sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    .body p {
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 48ch;
+    }
+
+    .body .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+    }
+
+    .body .tags span {
+      font-size: 10px;
+      color: var(--faint);
+      border: 1px solid var(--line);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .arrow {
+      color: var(--faint);
+      font-size: 1.25rem;
+      align-self: center;
+      transition: color 0.15s, transform 0.15s;
+    }
+    a.card:hover .arrow {
+      color: var(--fg);
+      transform: translateX(3px);
+    }
+
+    .note {
+      margin-top: 2.5rem;
+      padding: 1.1rem 1.25rem;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .note strong { color: var(--muted); font-weight: 500; }
+
+    .ref {
+      margin-top: 1rem;
+      font-size: 12px;
+      color: var(--faint);
+    }
+    .ref a { color: #a78bfa; text-decoration: none; }
+    .ref a:hover { text-decoration: underline; }
+
+    @media (max-width: 560px) {
+      a.card {
+        grid-template-columns: auto 1fr;
+      }
+      .arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">ragab.dev / prototypes</div>
+      <h1>Pick a direction.</h1>
+      <p class="lead">
+        Five interactive takes on a personal site — all minimal, terminal-adjacent,
+        modern, and a little creative. Open each, poke around, then tell me which
+        energy you want to build on. <strong style="color:var(--muted);font-weight:500">E</strong> blends terminal + agent harness with a scalable content layer.
+      </p>
+      <div class="principles">
+        <span>minimal</span>
+        <span>terminal-like</span>
+        <span>modern</span>
+        <span>interactive</span>
+        <span>creative</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <a class="card a" href="a-classic-terminal.html">
+        <div class="letter">A</div>
+        <div class="body">
+          <h2>Classic Terminal <span style="color:#4ade80;font-size:11px;font-family:IBM Plex Mono,monospace;font-weight:500">chosen</span></h2>
+          <p>
+            Full shell: <code>blogs</code>, <code>announcements</code>, <code>contact</code>,
+            <code>theme</code> (rose-pine default, 50+ palettes). Subtle boot & line animations.
+          </p>
+          <div class="tags">
+            <span>chosen</span>
+            <span>50+ themes</span>
+            <span>content commands</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+      </a>
+
+      <a class="card b" href="b-sectioned-grid.html">
+        <div class="letter">B</div>
+        <div class="body">
+          <h2>Sectioned Grid</h2>
+          <p>
+            Closest to Ted Brine’s layout you liked — labeled rows (Intro / Status / Bio / Tech / Projects),
+            mono type, purple accent, keyboard j/k navigation.
+          </p>
+          <div class="tags">
+            <span>ted-inspired</span>
+            <span>scannable</span>
+            <span>portfolio-ready</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+      </a>
+
+      <a class="card c" href="c-command-palette.html">
+        <div class="letter">C</div>
+        <div class="body">
+          <h2>Command Palette</h2>
+          <p>
+            Clean modern stage + sticky ⌘K palette. Type or shortcut (h/a/w/s/c)
+            to switch views. Feels like a product, still terminal-native.
+          </p>
+          <div class="tags">
+            <span>most modern</span>
+            <span>⌘K</span>
+            <span>SPA feel</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+      </a>
+
+      <a class="card d" href="d-split-pane.html">
+        <div class="letter">D</div>
+        <div class="body">
+          <h2>Split Pane IDE</h2>
+          <p>
+            VS Code / editor aesthetic — file tree, tabs, syntax-colored content,
+            status bar, collapsible terminal. Identity as code.
+          </p>
+          <div class="tags">
+            <span>most creative</span>
+            <span>dev-native</span>
+            <span>immersive</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+      </a>
+
+      <a class="card e" href="e-agent-harness.html">
+        <div class="letter">E</div>
+        <div class="body">
+          <h2>Agent Harness</h2>
+          <p>
+            Terminal soul + day-to-day AI harness. Visible tool calls, slash commands,
+            content registry for announcements &amp; blog — scales without new chrome.
+          </p>
+          <div class="tags">
+            <span>terminal × agent</span>
+            <span>blogs ready</span>
+            <span>recommended</span>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+      </a>
+    </div>
+
+    <div class="note">
+      <strong>How to use:</strong> open this folder with a local server, or just double-click
+      each HTML file. Content is placeholder (name, projects, links) — easy to swap.
+      Once you pick a direction (or a hybrid), we’ll productionize it.
+    </div>
+
+    <p class="ref">
+      Reference vibe: <a href="https://www.ted.ac" target="_blank" rel="noopener">ted.ac</a>
+      — sectioned dark portfolio with status, tech grid, projects.
+    </p>
+  </div>
+</body>
+</html>

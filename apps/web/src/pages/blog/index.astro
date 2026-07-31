@@ -1,0 +1,20 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { TerminalApp } from "../../components/TerminalApp";
+import { loadTerminalContent } from "../../lib/content";
+
+export const prerender = true;
+
+const { blogs, announcements } = await loadTerminalContent();
+---
+
+<BaseLayout title="blogs — ragab.dev" description="Writing and notes">
+  <main style="height: 100%">
+    <TerminalApp
+      client:load
+      blogs={blogs}
+      announcements={announcements}
+      boot={{ mode: "blogs" }}
+    />
+  </main>
+</BaseLayout>

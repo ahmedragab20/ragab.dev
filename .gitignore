@@ -1,0 +1,29 @@
+# deps
+node_modules
+.pnpm-store
+
+# builds
+dist
+.astro
+.wrangler
+.output
+storybook-static
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs / OS
+*.log
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# test / coverage
+coverage
+
+# turbo (if added later)
+.turbo
