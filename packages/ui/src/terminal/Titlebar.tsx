@@ -21,12 +21,14 @@ export function Titlebar({
   className,
 }: TitlebarProps) {
   return (
-    <div className={cx("ragab-titlebar", className)}>
+    <header className={cx("ragab-titlebar", className)}>
       <div className="ragab-titlebar__path">{path}</div>
       <div className="ragab-titlebar__end">
-        {badge != null && badge !== false ? <Badge>{badge}</Badge> : null}
+        {badge != null && badge !== false ? (
+          <Badge aria-label={`Theme: ${String(badge)}`}>{badge}</Badge>
+        ) : null}
         {actions}
       </div>
-    </div>
+    </header>
   );
 }

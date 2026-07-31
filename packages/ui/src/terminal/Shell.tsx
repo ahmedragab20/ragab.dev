@@ -20,7 +20,12 @@ export function Shell({
 }: ShellProps) {
   void _grain;
   return (
-    <div className={cx("ragab-shell", fill && "ragab-shell--fill", className)} {...rest}>
+    <div
+      className={cx("ragab-shell", fill && "ragab-shell--fill", className)}
+      role="region"
+      aria-label="Terminal"
+      {...rest}
+    >
       <div className="ragab-shell__inner">{children}</div>
     </div>
   );

@@ -17,7 +17,11 @@ export function Hint({
   className,
 }: HintProps) {
   return (
-    <div className={cx("ragab-hint", className)}>
+    <div
+      className={cx("ragab-hint", className)}
+      role="group"
+      aria-label="Command hints"
+    >
       {children ?? (
         <>
           {commands.map((c) =>

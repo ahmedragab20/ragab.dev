@@ -56,6 +56,11 @@ export function PromptRow({
             "ragab-vim-badge",
             vimMode === "normal" && "ragab-vim-badge--normal",
           )}
+          aria-label={
+            vimMode === "normal"
+              ? "Vim normal mode — activate for insert"
+              : "Vim insert mode — activate for normal"
+          }
           title={
             vimMode === "normal"
               ? "vim normal — click for insert"
@@ -68,7 +73,7 @@ export function PromptRow({
             );
           }}
         >
-          {vimMode === "normal" ? "N" : "I"}
+          <span aria-hidden="true">{vimMode === "normal" ? "N" : "I"}</span>
         </button>
       ) : null}
       <Prompt {...prompt} />

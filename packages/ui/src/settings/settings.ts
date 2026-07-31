@@ -30,4 +30,13 @@ export function loadSettings(): ShellSettings {
 export function persistSettings(settings: ShellSettings): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  // Stamp on <html> so a tiny post-body script / CSS can mirror without React
+  try {
+    const root = document.documentElement;
+    root.dataset.vim = settings.vim ? "1" : "0";
+    root.dataset.suggest = settings.suggest ? "1" : "0";
+    root.dataset.autocopy = settings.autoCopy ? "1" : "0";
+  } catch {
+    /* ignore */
+  }
 }

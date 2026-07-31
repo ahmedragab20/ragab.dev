@@ -1,13 +1,13 @@
 /** Auto-extracted from classic-terminal prototype. */
 export const palettes = {
       "rose-pine": {
-        bg: "#191724", panel: "#1f1d2e", fg: "#e0def4", dim: "#6e6a86", muted: "#908caa",
+        bg: "#191724", panel: "#1f1d2e", fg: "#e0def4", dim: "#85819f", muted: "#908caa",
         bright: "#c4a7e7", accent: "#ebbcba", love: "#eb6f92", gold: "#f6c177", foam: "#9ccfd8",
         pine: "#31748f", border: "#26233a", cursor: "#ebbcba", err: "#eb6f92", ok: "#9ccfd8",
         scan: "rgba(0,0,0,0.06)", vignette: "rgba(0,0,0,0.45)",
       },
       "rose-pine-moon": {
-        bg: "#232136", panel: "#2a273f", fg: "#e0def4", dim: "#6e6a86", muted: "#908caa",
+        bg: "#232136", panel: "#2a273f", fg: "#e0def4", dim: "#85819f", muted: "#908caa",
         bright: "#c4a7e7", accent: "#ea9a97", love: "#eb6f92", gold: "#f6c177", foam: "#9ccfd8",
         pine: "#3e8fb0", border: "#393552", cursor: "#ea9a97", err: "#eb6f92", ok: "#9ccfd8",
         scan: "rgba(0,0,0,0.05)", vignette: "rgba(0,0,0,0.4)",
