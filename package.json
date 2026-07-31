@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @ragab/web --filter @ragab/api dev",
     "dev:web": "pnpm --filter @ragab/web dev",
+    "preview:web": "pnpm --filter @ragab/web preview:static",
+    "lighthouse:web": "pnpm --filter @ragab/web build && npx --yes serve apps/web/dist -l 4173",
     "dev:api": "pnpm --filter @ragab/api dev",
     "dev:ui": "pnpm --filter @ragab/ui storybook",
     "build": "pnpm -r --filter=./packages/* build && pnpm --filter @ragab/web build && pnpm --filter @ragab/api build",

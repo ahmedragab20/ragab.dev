@@ -1,20 +1,55 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { TerminalApp } from "../../components/TerminalApp";
-import { loadTerminalContent } from "../../lib/content";
+import { loadTerminalContent, withoutBodies } from "../../lib/content";
 
 export const prerender = true;
 
 const { blogs, announcements } = await loadTerminalContent();
+const leanBlogs = withoutBodies(blogs);
+const leanAnnouncements = withoutBodies(announcements);
 ---
 
-<BaseLayout title="blogs — ragab.dev" description="Writing and notes">
-  <main style="height: 100%">
+<BaseLayout
+  title="blogs — ragab.dev"
+  description="Writing and notes from Ahmed Ragab"
+  path="/blog"
+>
+  <main id="terminal" style="height: 100%">
+    <h1 class="sr-only">Blog</h1>
+    <nav class="sr-only" aria-label="Posts">
+      <ul>
+        {
+          blogs.map((post) => (
+            <li>
+              <a href={`/blog/${post.slug}`}>
+                {post.title}
+                {post.excerpt ? ` — ${post.excerpt}` : ""}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
     <TerminalApp
-      client:load
-      blogs={blogs}
-      announcements={announcements}
+      client:idle={{ timeout: 200 }}
+      blogs={leanBlogs}
+      announcements={leanAnnouncements}
       boot={{ mode: "blogs" }}
     />
   </main>
 </BaseLayout>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

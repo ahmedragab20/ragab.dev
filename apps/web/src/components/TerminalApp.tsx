@@ -1,12 +1,12 @@
 import {
   CompletionMenu,
+  DEFAULT_SETTINGS,
   Hint,
   Line,
   Output,
   OutputText,
   PromptRow,
   Shell,
-  TerminalProse,
   ThemeProvider,
   Titlebar,
   ToastProvider,
@@ -24,14 +24,22 @@ import {
   type ThemeName,
 } from "@ragab/themes";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
   type Ref,
 } from "react";
+
+/** Prose/MDX/shiki only when a post is open — keeps the home shell lean. */
+const TerminalProse = lazy(() =>
+  import("@ragab/ui/prose").then((m) => ({ default: m.TerminalProse })),
+);
 import { site } from "../data/site";
 import {
   appendHistory,
@@ -54,7 +62,8 @@ export type ContentItem = {
   excerpt?: string;
   tags?: string[];
   pinned?: boolean;
-  body: string;
+  /** MD/MDX body — omit on home to keep the island props small. */
+  body?: string;
 };
 
 export type TerminalBoot =
@@ -153,6 +162,41 @@ function isEditableTarget(el: EventTarget | null): boolean {
   return Boolean(el.closest("input, textarea, select, [contenteditable='true']"));
 }
 
+/** Boot buffer shared by SSR first paint + client (DEFAULT_THEME for hydration match). */
+function buildBootLines(
+  boot: TerminalBoot,
+  blogs: ContentItem[],
+  themeName: string,
+): Draft[] {
+  if (boot.mode === "home") {
+    return [
+      { text: "whoami", echo: true },
+      { text: site.name, tone: "bright" },
+      { text: `${site.role} · ${site.location}`, tone: "gold" },
+      { text: "" },
+      ...site.bio.map((l) => ({ text: l, tone: "foam" as const })),
+      { text: "" },
+      {
+        text: `theme: ${themeName}  ·  ${themeNames.length} palettes`,
+        tone: "dim",
+      },
+      {
+        text: "tip: Tab for chooser · help · blogs · contact",
+        tone: "accent",
+      },
+      { text: "" },
+    ];
+  }
+  if (boot.mode === "blogs") {
+    return [{ text: "blogs", echo: true }, ...listBlogs(blogs), { text: "" }];
+  }
+  return [
+    { text: `blog ${boot.slug}`, echo: true },
+    ...readBlog(boot.slug, blogs),
+    { text: "" },
+  ];
+}
+
 function TerminalInner({
   blogs,
   announcements,
@@ -169,10 +213,16 @@ function TerminalInner({
   } = useTheme();
   const { toast } = useToast();
 
-  const [settings, setSettingsState] = useState<ShellSettings>(() => loadSettings());
-  const [lines, setLines] = useState<OutEntry[]>([]);
+  // Defaults only for SSR + first client paint — localStorage after mount
+  // (avoids hydration mismatch when stored settings e.g. vim:true differ)
+  const [settings, setSettingsState] = useState<ShellSettings>(DEFAULT_SETTINGS);
+  // SSR the boot banner so LCP is real content (not an empty log).
+  // Name uses DEFAULT_THEME for SSR/hydrate match; colors come from CSS/boot script.
+  const [lines, setLines] = useState<OutEntry[]>(() =>
+    materialize(buildBootLines(boot, blogs, DEFAULT_THEME)),
+  );
   const [value, setValue] = useState("");
-  const [history, setHistory] = useState<string[]>(() => loadHistory());
+  const [history, setHistory] = useState<string[]>([]);
   const [vimMode, setVimMode] = useState<"insert" | "normal">("insert");
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuIndex, setMenuIndex] = useState(0);
@@ -181,13 +231,29 @@ function TerminalInner({
   const draft = useRef("");
   const outputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const booted = useRef(false);
   const lastCopy = useRef("");
+  const [storageReady, setStorageReady] = useState(false);
+  /** Boot / SSR lines stay still; only command output after mount animates (LCP). */
+  const bootMaxId = useRef(
+    lines.reduce((m, l) => Math.max(m, l.id), 0),
+  );
+  const shouldAnimate = useCallback(
+    (id: number) => id > bootMaxId.current,
+    [],
+  );
 
-  // Keep history in localStorage (↑↓ across sessions)
+  // Before paint: restore prefs so vim/hint don't flash defaults → stored
+  useLayoutEffect(() => {
+    setSettingsState(loadSettings());
+    setHistory(loadHistory());
+    setStorageReady(true);
+  }, []);
+
+  // Keep history in localStorage (↑↓ across sessions); only after hydrate
   useEffect(() => {
+    if (!storageReady) return;
     persistHistory(history);
-  }, [history]);
+  }, [history, storageReady]);
 
   const updateSettings = useCallback(
     (patch: Partial<ShellSettings>, quiet = false) => {
@@ -332,7 +398,8 @@ function TerminalInner({
       if (e.key === "ArrowDown" || e.key === "j") {
         e.preventDefault();
         e.stopPropagation();
-        const next = options[Math.min(idx + 1, options.length - 1)];
+        // Wrap past the last item → first
+        const next = options[(idx + 1) % options.length];
         next?.focus();
         next?.scrollIntoView({ block: "nearest" });
         previewFromEl(next);
@@ -391,48 +458,10 @@ function TerminalInner({
     scroll();
   }, [lines, scroll]);
 
-  // Boot banner
+  // Focus prompt after mount (boot buffer already SSR'd)
   useEffect(() => {
-    if (booted.current) return;
-    booted.current = true;
-
-    let bootLines: Draft[] = [];
-    if (boot.mode === "home") {
-      // Startup: run whoami (echo + output)
-      bootLines = [
-        { text: "whoami", echo: true },
-        { text: site.name, tone: "bright" },
-        { text: `${site.role} · ${site.location}`, tone: "gold" },
-        { text: "" },
-        ...site.bio.map((l) => ({ text: l, tone: "foam" as const })),
-        { text: "" },
-        {
-          text: `theme: ${theme}  ·  ${themeNames.length} palettes`,
-          tone: "dim",
-        },
-        {
-          text: "tip: Tab for chooser · help · blogs · contact",
-          tone: "accent",
-        },
-        { text: "" },
-      ];
-    } else if (boot.mode === "blogs") {
-      bootLines = [
-        { text: "blogs", echo: true },
-        ...listBlogs(blogs),
-        { text: "" },
-      ];
-    } else if (boot.mode === "blog") {
-      bootLines = [
-        { text: `blog ${boot.slug}`, echo: true },
-        ...readBlog(boot.slug, blogs),
-        { text: "" },
-      ];
-    }
-
-    push(bootLines);
     inputRef.current?.focus();
-  }, [blogs, boot, push, theme]);
+  }, []);
 
   // Auto-copy on select in output
   useEffect(() => {
@@ -627,12 +656,14 @@ function TerminalInner({
       }
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setMenuIndex((i) => Math.min(i + 1, menuResult.items.length - 1));
+        setMenuIndex((i) => (i + 1) % menuResult.items.length);
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setMenuIndex((i) => Math.max(i - 1, 0));
+        setMenuIndex((i) =>
+          i <= 0 ? menuResult.items.length - 1 : i - 1,
+        );
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
@@ -769,6 +800,7 @@ function TerminalInner({
           <button
             type="button"
             className="ragab-settings-btn"
+            aria-label="Open settings"
             onClick={(e) => {
               e.stopPropagation();
               run("settings");
@@ -785,7 +817,7 @@ function TerminalInner({
             <article key={l.id} className="ragab-article">
               {!l.bare ? (
                 <>
-                  <Line tone="bright" animate>
+                  <Line tone="bright" animate={shouldAnimate(l.id)}>
                     {l.title}
                   </Line>
                   <div className="ragab-article__meta">
@@ -811,7 +843,15 @@ function TerminalInner({
                   <hr className="ragab-article__rule" />
                 </>
               ) : null}
-              <TerminalProse source={l.source} />
+              <Suspense
+                fallback={
+                  <div className="ragab-prose__loading" role="status">
+                    loading post…
+                  </div>
+                }
+              >
+                <TerminalProse source={l.source} />
+              </Suspense>
               {!l.bare ? <hr className="ragab-article__rule" /> : null}
             </article>
           ) : l.echo ? (
@@ -821,7 +861,9 @@ function TerminalInner({
               key={l.id}
               href={l.href}
               data-ragab-option={l.id}
-              className={`ragab-line ragab-text ragab-line--link ragab-line--animate${
+              className={`ragab-line ragab-text ragab-line--link${
+                shouldAnimate(l.id) ? " ragab-line--animate" : ""
+              }${
                 l.tone && l.tone !== "default" ? ` ragab-text--${l.tone}` : ""
               }`}
               target={l.href.startsWith("http") ? "_blank" : undefined}
@@ -837,7 +879,9 @@ function TerminalInner({
               type="button"
               data-ragab-option={l.id}
               data-theme-preview={l.themePreview || undefined}
-              className={`ragab-line ragab-text ragab-line--action ragab-line--animate${
+              className={`ragab-line ragab-text ragab-line--action${
+                shouldAnimate(l.id) ? " ragab-line--animate" : ""
+              }${
                 l.tone && l.tone !== "default" ? ` ragab-text--${l.tone}` : ""
               }`}
               onClick={(e) => {
@@ -853,7 +897,7 @@ function TerminalInner({
               <OutputText text={l.text || " "} />
             </button>
           ) : (
-            <Line key={l.id} tone={l.tone} animate>
+            <Line key={l.id} tone={l.tone} animate={shouldAnimate(l.id)}>
               <OutputText text={l.text || " "} />
             </Line>
           ),
@@ -1223,6 +1267,17 @@ function listBlogs(blogs: ContentItem[]): Draft[] {
   return lines;
 }
 
+function findBlog(
+  slug: string | undefined,
+  blogs: ContentItem[],
+): ContentItem | undefined {
+  if (!slug) return undefined;
+  const q = slug.toLowerCase();
+  return blogs.find(
+    (p) => p.slug === q || p.slug.startsWith(q) || p.slug.includes(q),
+  );
+}
+
 function readBlog(slug: string | undefined, blogs: ContentItem[]): Draft[] {
   if (!slug) {
     return [
@@ -1230,14 +1285,23 @@ function readBlog(slug: string | undefined, blogs: ContentItem[]): Draft[] {
       { text: "type blogs to list", tone: "dim" },
     ];
   }
-  const q = slug.toLowerCase();
-  const post = blogs.find(
-    (p) => p.slug === q || p.slug.startsWith(q) || p.slug.includes(q),
-  );
+  const post = findBlog(slug, blogs);
   if (!post) {
     return [
       { text: `post not found: ${slug}`, tone: "err" },
       { text: "type blogs to list slugs", tone: "dim" },
+    ];
+  }
+  if (!post.body) {
+    // Body stripped from island props — post route carries the full MDX
+    if (typeof window !== "undefined") {
+      window.location.assign(`/blog/${post.slug}`);
+    }
+    return [
+      {
+        text: `opening /blog/${post.slug}…`,
+        tone: "dim",
+      },
     ];
   }
   return [
@@ -1267,7 +1331,7 @@ function listAnnouncements(items: ContentItem[]): Draft[] {
       tone: a.pinned ? "gold" : "accent",
     });
     lines.push({ text: `${a.date}  ·  ${a.slug}`, tone: "dim" });
-    if (a.body.trim()) {
+    if (a.body?.trim()) {
       lines.push({
         kind: "prose",
         title: a.title,

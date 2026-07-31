@@ -1,18 +1,68 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { TerminalApp } from "../components/TerminalApp";
-import { loadTerminalContent } from "../lib/content";
+import { site } from "../data/site";
+import { loadTerminalContent, withoutBodies } from "../lib/content";
+
+export const prerender = true;
 
 const { blogs, announcements } = await loadTerminalContent();
+// Meta only on the home island — full bodies live on /blog/[slug]
+const leanBlogs = withoutBodies(blogs);
+const leanAnnouncements = withoutBodies(announcements);
 ---
 
-<BaseLayout title="ragab.dev — terminal">
-  <main style="height: 100%">
+<BaseLayout
+  title="ragab.dev — terminal"
+  description={`${site.name} · ${site.role} · ${site.location}. ${site.bio[0] ?? ""}`}
+  path="/"
+>
+  <main id="terminal" style="height: 100%">
+    <h1 class="sr-only">{site.name} — {site.role}</h1>
+    <p class="sr-only">
+      {site.bio.join(" ")} Commands: help, whoami, blogs, contact, theme list.
+      Blog index at /blog.
+    </p>
+    <nav class="sr-only" aria-label="Site">
+      <ul>
+        <li><a href="/blog">Blog</a></li>
+        <li><a href={`mailto:${site.contact.email}`}>Email</a></li>
+        {
+          site.contact.github && (
+            <li>
+              <a
+                href={
+                  site.contact.github.startsWith("http")
+                    ? site.contact.github
+                    : `https://${site.contact.github}`
+                }
+              >
+                GitHub
+              </a>
+            </li>
+          )
+        }
+      </ul>
+    </nav>
     <TerminalApp
-      client:load
-      blogs={blogs}
-      announcements={announcements}
+      client:idle={{ timeout: 200 }}
+      blogs={leanBlogs}
+      announcements={leanAnnouncements}
       boot={{ mode: "home" }}
     />
   </main>
 </BaseLayout>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

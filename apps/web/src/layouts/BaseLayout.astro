@@ -1,41 +1,131 @@
 ---
 import "@ragab/themes/css";
 import "../styles/global.css";
+import { site } from "../data/site";
 
 interface Props {
   title?: string;
   description?: string;
+  /** Absolute path for canonical, e.g. `/` or `/blog/foo` */
+  path?: string;
+  /** Open Graph type */
+  ogType?: "website" | "article";
 }
 
 const {
   title = "ragab.dev",
-  description = "Software engineer · classic terminal personal site",
+  description = `${site.name} · ${site.role} · classic terminal personal site`,
+  path = Astro.url.pathname,
+  ogType = "website",
 } = Astro.props;
+
+const canonical = new URL(path, Astro.site ?? "https://ragab.dev").href;
+const siteName = "ragab.dev";
 ---
 
 <!doctype html>
 <html lang="en" data-theme="rose-pine">
   <head>
+    {/*
+      MUST run before CSS paints. Sets data-theme so [data-theme="…"] rules
+      from tokens.css apply on first paint (no rose-pine flash).
+    */}
+    <script is:inline>
+      (function () {
+        try {
+          var root = document.documentElement;
+          // Theme → data-theme + optional cached CSS vars (no FOUC)
+          var t = localStorage.getItem("ragab.dev.theme");
+          if (t) {
+            root.dataset.theme = t;
+            var raw = localStorage.getItem("ragab.dev.theme.vars");
+            if (raw) {
+              var vars = JSON.parse(raw);
+              for (var k in vars) {
+                if (Object.prototype.hasOwnProperty.call(vars, k)) {
+                  root.style.setProperty(k, vars[k]);
+                }
+              }
+            }
+          }
+          // Settings flags for pre-React DOM tweaks
+          var sraw = localStorage.getItem("ragab.dev.settings");
+          if (sraw) {
+            var s = JSON.parse(sraw);
+            root.dataset.vim = s.vim ? "1" : "0";
+            root.dataset.suggest = s.suggest === false ? "0" : "1";
+            root.dataset.autocopy = s.autoCopy === false ? "0" : "1";
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="author" content={site.name} />
     <meta name="generator" content={Astro.generator} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <meta name="theme-color" content="#191724" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    {/* JetBrains Mono — primary UI font (self-hosted, no Google CDN) */}
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/jetbrains-mono-regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
+    <style is:inline>
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url("/fonts/jetbrains-mono-regular.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+        src: url("/fonts/jetbrains-mono-medium.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url("/fonts/jetbrains-mono-semibold.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        src: url("/fonts/jetbrains-mono-bold.woff2") format("woff2");
+      }
+    </style>
+
     <title>{title}</title>
-    <script is:inline>
-      try {
-        const key = "ragab.dev.theme";
-        const t = localStorage.getItem(key);
-        if (t) document.documentElement.dataset.theme = t;
-      } catch {}
-    </script>
   </head>
   <body>
+    <a class="skip-link" href="#terminal">Skip to terminal</a>
     <slot />
   </body>
 </html>

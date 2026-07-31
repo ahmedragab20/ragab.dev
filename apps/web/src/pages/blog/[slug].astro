@@ -1,7 +1,11 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { TerminalApp } from "../../components/TerminalApp";
-import { loadTerminalContent } from "../../lib/content";
+import {
+  loadTerminalContent,
+  withOnlyBody,
+  withoutBodies,
+} from "../../lib/content";
 
 export const prerender = true;
 
@@ -9,38 +13,54 @@ export async function getStaticPaths() {
   const { blogs } = await loadTerminalContent();
   return blogs.map((post) => ({
     params: { slug: post.slug },
-    props: { slug: post.slug, title: post.title, excerpt: post.excerpt },
+    props: {
+      slug: post.slug,
+      title: post.title,
+      excerpt: post.excerpt,
+      date: post.date,
+      body: post.body ?? "",
+    },
   }));
 }
 
-const { slug, title, excerpt } = Astro.props;
+const { slug, title, excerpt, date, body } = Astro.props;
 const { blogs, announcements } = await loadTerminalContent();
-const post = blogs.find((b) => b.slug === slug);
+// Only this post carries a body into the island
+const leanBlogs = withOnlyBody(blogs, slug);
+const leanAnnouncements = withoutBodies(announcements);
 ---
 
 <BaseLayout
   title={`${title ?? slug} — ragab.dev`}
   description={excerpt ?? "Blog post"}
+  path={`/blog/${slug}`}
+  ogType="article"
 >
-  <main style="height: 100%">
+  <main id="terminal" style="height: 100%">
     <TerminalApp
-      client:load
-      blogs={blogs}
-      announcements={announcements}
+      client:idle={{ timeout: 200 }}
+      blogs={leanBlogs}
+      announcements={leanAnnouncements}
       boot={{ mode: "blog", slug }}
     />
   </main>
 </BaseLayout>
 
 {
-  /* Ensure prerender has content for SEO crawlers that ignore JS */
+  /* Crawlable article for SEO / no-JS */
 }
 {
-  post && (
-    <article class="sr-only" aria-hidden="true">
-      <h1>{post.title}</h1>
-      <time>{post.date}</time>
-      <pre>{post.body}</pre>
+  body && (
+    <article class="sr-only">
+      <h1>{title}</h1>
+      <time datetime={date}>{date}</time>
+      {excerpt ? <p>{excerpt}</p> : null}
+      <pre>{body}</pre>
+      <p>
+        <a href="/blog">All posts</a>
+        {" · "}
+        <a href="/">Home</a>
+      </p>
     </article>
   )
 }

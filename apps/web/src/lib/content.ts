@@ -32,3 +32,18 @@ export async function loadTerminalContent(): Promise<{
 
   return { blogs, announcements };
 }
+
+/** Drop MD bodies so island props stay small (list/meta only). */
+export function withoutBodies(items: ContentItem[]): ContentItem[] {
+  return items.map(({ body: _body, ...meta }) => meta);
+}
+
+/** Keep a single post body (boot mode) — strip the rest. */
+export function withOnlyBody(
+  items: ContentItem[],
+  slug: string,
+): ContentItem[] {
+  return items.map((item) =>
+    item.slug === slug ? item : { ...item, body: undefined },
+  );
+}
