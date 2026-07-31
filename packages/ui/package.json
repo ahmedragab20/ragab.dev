@@ -8,6 +8,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./prose": {
+      "types": "./src/prose/TerminalProse.tsx",
+      "default": "./src/prose/TerminalProse.tsx"
+    },
     "./styles.css": "./src/styles.css"
   },
   "scripts": {

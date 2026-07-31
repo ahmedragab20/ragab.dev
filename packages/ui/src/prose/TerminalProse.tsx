@@ -1,12 +1,9 @@
-import { evaluate } from "@mdx-js/mdx";
-import * as runtime from "react/jsx-runtime";
 import {
   useEffect,
   useMemo,
   useState,
   type ComponentType,
 } from "react";
-import remarkGfm from "remark-gfm";
 import { cx } from "../lib/cx";
 import { terminalMdxComponents } from "./mdx-components";
 
@@ -24,7 +21,7 @@ type MdxModule = {
 
 /**
  * Compile & render MD/MDX with terminal-styled components.
- * Custom shortcodes (Callout, YouTube, Embed) are injected via useMDXComponents.
+ * MDX runtime is loaded on demand so the home shell stays lean.
  */
 export function TerminalProse({ source, className, components }: TerminalProseProps) {
   const [Content, setContent] = useState<MdxModule["default"] | null>(null);
@@ -44,7 +41,13 @@ export function TerminalProse({ source, className, components }: TerminalProsePr
 
     (async () => {
       try {
-        // Pass components at evaluate-time — required for custom MDX tags like <Callout />
+        // Dynamic imports keep @mdx-js/mdx + remark-gfm out of the home bundle
+        const [{ evaluate }, runtime, { default: remarkGfm }] = await Promise.all([
+          import("@mdx-js/mdx"),
+          import("react/jsx-runtime"),
+          import("remark-gfm"),
+        ]);
+
         const mod = (await evaluate(source, {
           ...runtime,
           remarkPlugins: [remarkGfm],
@@ -71,7 +74,9 @@ export function TerminalProse({ source, className, components }: TerminalProsePr
   return (
     <div className={cx("ragab-prose", className)} data-pending={pending || undefined}>
       {pending && !Content ? (
-        <div className="ragab-prose__loading">compiling mdx…</div>
+        <div className="ragab-prose__loading" role="status" aria-live="polite">
+          compiling mdx…
+        </div>
       ) : null}
       {error ? (
         <>
