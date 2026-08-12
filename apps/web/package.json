@@ -21,7 +21,8 @@
     "@ragab/ui": "workspace:*",
     "astro": "^5.13.2",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "web-haptics": "^0.0.6"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",

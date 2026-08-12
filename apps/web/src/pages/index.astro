@@ -20,27 +20,36 @@ const leanAnnouncements = withoutBodies(announcements);
   <main id="terminal" style="height: 100%">
     <h1 class="sr-only">{site.name} — {site.role}</h1>
     <p class="sr-only">
-      {site.bio.join(" ")} Commands: help, whoami, blogs, contact, theme list.
-      Blog index at /blog.
+      {site.bio.join(" ")}
+      {
+        site.experience?.length
+          ? `Work history: ${site.experience.map((e) => `${e.role} at ${e.org}`).join(", ")}.`
+          : ""
+      }
+      {
+        site.projects.length
+          ? `Projects: ${site.projects.map((p) => `${p.name} — ${p.description}`).join(" ")}`
+          : ""
+      }
+      Commands: help, tour, whoami, projects, blogs, contact, theme list. Blog
+      index at /blog.
     </p>
     <nav class="sr-only" aria-label="Site">
       <ul>
         <li><a href="/blog">Blog</a></li>
         <li><a href={`mailto:${site.contact.email}`}>Email</a></li>
         {
-          site.contact.github && (
-            <li>
-              <a
-                href={
-                  site.contact.github.startsWith("http")
-                    ? site.contact.github
-                    : `https://${site.contact.github}`
-                }
-              >
-                GitHub
-              </a>
-            </li>
-          )
+          (["github", "twitter", "linkedin"] as const).map((key) => {
+            const value = site.contact[key];
+            if (!value) return null;
+            const href = value.startsWith("http") ? value : `https://${value}`;
+            const label = key === "twitter" ? "X" : key;
+            return (
+              <li>
+                <a href={href}>{label}</a>
+              </li>
+            );
+          })
         }
       </ul>
     </nav>

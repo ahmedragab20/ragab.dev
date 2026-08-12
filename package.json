@@ -37,6 +37,9 @@
       "esbuild",
       "sharp",
       "workerd"
-    ]
+    ],
+    "patchedDependencies": {
+      "web-haptics": "patches/web-haptics.patch"
+    }
   }
 }

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  web-haptics:
+    hash: 6710d98fc263acbe6b10d5a2cc96d3318d9b6e1a0f851a88bb296248ba6a8b2d
+    path: patches/web-haptics.patch
+
 importers:
 
   .:
@@ -63,6 +68,9 @@ importers:
       react-dom:
         specifier: ^19.1.1
         version: 19.2.8(react@19.2.8)
+      web-haptics:
+        specifier: ^0.0.6
+        version: 0.0.6(patch_hash=6710d98fc263acbe6b10d5a2cc96d3318d9b6e1a0f851a88bb296248ba6a8b2d)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@astrojs/check':
         specifier: ^0.9.4
@@ -4087,6 +4095,23 @@ packages:
 
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
+
+  web-haptics@0.0.6:
+    resolution: {integrity: sha512-eCzcf1LDi20+Fr0x9V3OkX92k0gxEQXaHajmhXHitsnk6SxPeshv8TBtBRqxyst8HI1uf2FyFVE7QS3jo1gkrw==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+      svelte: '>=4'
+      vue: '>=3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
@@ -8246,6 +8271,11 @@ snapshots:
   vscode-nls@5.2.0: {}
 
   vscode-uri@3.1.0: {}
+
+  web-haptics@0.0.6(patch_hash=6710d98fc263acbe6b10d5a2cc96d3318d9b6e1a0f851a88bb296248ba6a8b2d)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+    optionalDependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
 
   web-namespaces@2.0.1: {}
 

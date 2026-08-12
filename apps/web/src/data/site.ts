@@ -7,14 +7,15 @@ export const site: SiteConfig = {
   location: "Egypt",
   status: "Available",
   bio: [
-    "I build systems that are small, fast, and honest.",
-    "Minimal interfaces. Careful engineering. A little delight.",
+    "I build AI-integrated developer tools and fast, honest web systems.",
+    "Software engineer at Foodics — Frontend, Backend, Releases. 6+ years on the web",
   ],
   stack: [
-    "languages   typescript · go · rust · python",
-    "frontend    react · next · astro · tailwind",
-    "backend     node · hono · postgres · redis",
-    "infra       docker · cloudflare · terraform",
+    "languages   typescript · go · rust · php",
+    "frontend    react · next · astro · vue · nuxt · solidjs · tailwind · storybook",
+    "backend     node · bun · hono · laravel · directus · postgres · mysql · redis",
+    "ai          mcp · coding agents · llm tooling",
+    "infra       docker · cloudflare",
   ],
   contact: {
     email: "ahmedragab20901@gmail.com",
@@ -22,5 +23,56 @@ export const site: SiteConfig = {
     twitter: "x.com/__rgbx",
     linkedin: "linkedin.com/in/ahmed-ragab-bb75541b3",
   },
-  projects: [],
+  experience: [
+    {
+      role: "Software Engineer",
+      org: "Foodics",
+      period: "2024 — now",
+      note: "crafting UIs, orchestrating pipelines, managing releases",
+    },
+    {
+      role: "Senior Frontend Engineer",
+      org: "BuildScan",
+      note: "digitising construction workflows",
+    },
+    {
+      role: "Frontend Engineer",
+      org: "Abwaab",
+      note: "ed-tech platform for MENA students",
+    },
+    {
+      role: "Senior Frontend Developer",
+      org: "Jetorder",
+      note: "e-commerce ordering experiences",
+    },
+  ],
+  projects: [
+    {
+      name: "diffing",
+      description:
+        "Local-first code review + planning tool — human ↔ AI realtime. Web UI, inline comments, plan review, MCP server (37 tools), Rust TUI.",
+      url: "https://github.com/ahmedragab20/diffing",
+      tech: ["typescript", "rust", "node", "mcp", "cli"],
+    },
+    {
+      name: "ragab.dev",
+      description:
+        "This site — terminal-first personal site. Astro + React islands, 66-palette token theme engine, Cloudflare edge.",
+      url: "https://ragab.dev",
+      tech: ["astro", "react", "cloudflare"],
+    },
+    {
+      name: "vue-use-state",
+      description:
+        "Elevate a reactive variable to global scope shared across a Vue app — tiny, composable state.",
+      url: "https://github.com/ahmedragab20/vue-use-state",
+      tech: ["vue", "typescript"],
+    },
+    {
+      name: "leptos-axum-tailwind",
+      description: "Starter template for Axum + Leptos + Tailwind — full-stack Rust web apps.",
+      url: "https://github.com/ahmedragab20/leptos-axum-tailwind",
+      tech: ["rust", "leptos", "axum", "tailwind"],
+    },
+  ],
 };

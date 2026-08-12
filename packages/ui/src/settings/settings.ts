@@ -7,12 +7,18 @@ export type ShellSettings = {
   suggest: boolean;
   /** Copy selection in the output pane automatically. */
   autoCopy: boolean;
+  /** Haptic vibration for actions, navigation, and typing. */
+  haptics: boolean;
+  /** Sound level for haptic clicks, 0-100 (scales vibration strength too). */
+  volume: number;
 };
 
 export const DEFAULT_SETTINGS: ShellSettings = {
   vim: false,
   suggest: true,
   autoCopy: true,
+  haptics: true,
+  volume: 50,
 };
 
 export function loadSettings(): ShellSettings {
@@ -21,7 +27,10 @@ export function loadSettings(): ShellSettings {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
     const parsed = JSON.parse(raw) as Partial<ShellSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    const out = { ...DEFAULT_SETTINGS, ...parsed };
+    // Guard against corrupted storage (e.g. hand-edited volume)
+    if (!Number.isFinite(out.volume)) out.volume = DEFAULT_SETTINGS.volume;
+    return out;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
@@ -36,6 +45,7 @@ export function persistSettings(settings: ShellSettings): void {
     root.dataset.vim = settings.vim ? "1" : "0";
     root.dataset.suggest = settings.suggest ? "1" : "0";
     root.dataset.autocopy = settings.autoCopy ? "1" : "0";
+    root.dataset.haptics = settings.haptics ? "1" : "0";
   } catch {
     /* ignore */
   }

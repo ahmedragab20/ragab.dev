@@ -48,14 +48,26 @@ export const SiteConfigSchema = z.object({
       name: z.string(),
       description: z.string(),
       url: z.string().optional(),
+      tech: z.array(z.string()).optional(),
     }),
   ),
+  experience: z
+    .array(
+      z.object({
+        role: z.string(),
+        org: z.string(),
+        period: z.string().optional(),
+        note: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 export type SiteConfig = z.infer<typeof SiteConfigSchema>;
 
 /** Terminal command ids exposed in v1. */
 export const TERMINAL_COMMANDS = [
   "help",
+  "tour",
   "whoami",
   "status",
   "bio",

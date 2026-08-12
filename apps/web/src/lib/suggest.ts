@@ -3,6 +3,7 @@ import type { CompletionItem } from "@ragab/ui";
 
 export const COMMANDS = [
   "help",
+  "tour",
   "whoami",
   "status",
   "bio",
@@ -15,6 +16,7 @@ export const COMMANDS = [
   "theme",
   "settings",
   "set",
+  "volume",
   "clear",
   "ls",
   "neofetch",
@@ -23,7 +25,7 @@ export const COMMANDS = [
 export const COMMAND_SET = new Set<string>(COMMANDS);
 
 /** Commands that take further arguments (show trailing space when filled). */
-const NEEDS_ARGS = new Set(["blog", "post", "read", "theme", "set"]);
+const NEEDS_ARGS = new Set(["blog", "post", "read", "theme", "set", "volume"]);
 
 export type SuggestContext = {
   blogs: { slug: string; title?: string; date?: string }[];
@@ -44,9 +46,7 @@ export function getSuggestion(value: string, ctx: SuggestContext): string {
   if (!result || result.items.length === 0) return "";
   const first = result.items[0]!;
   const partial = currentToken(value);
-  const fill = first.value.endsWith(" ")
-    ? first.value.trimEnd()
-    : first.value;
+  const fill = first.value.endsWith(" ") ? first.value.trimEnd() : first.value;
   if (fill.toLowerCase().startsWith(partial) && fill.toLowerCase() !== partial) {
     return fill.slice(partial.length);
   }
@@ -69,10 +69,7 @@ function currentToken(value: string): string {
  * Build a chooser menu for the current input — used by Tab popup.
  * Selection always fills the input; never auto-executes.
  */
-export function getCompletions(
-  value: string,
-  ctx: SuggestContext,
-): CompletionResult | null {
+export function getCompletions(value: string, ctx: SuggestContext): CompletionResult | null {
   const raw = value;
   const endsWithSpace = /\s$/.test(raw);
   const trimmed = raw.trim();
@@ -186,10 +183,7 @@ export function getCompletions(
             }),
           ),
       ] satisfies CompletionItem[]
-    ).filter(
-      (item) =>
-        !partial || item.value.includes(partial) || item.label.startsWith(partial),
-    );
+    ).filter((item) => !partial || item.value.includes(partial) || item.label.startsWith(partial));
 
     return {
       title: "theme — choose",
@@ -200,7 +194,7 @@ export function getCompletions(
 
   // set <key> [on|off]
   if (cmd === "set") {
-    const keys = ["vim", "suggest", "autocopy"] as const;
+    const keys = ["vim", "suggest", "autocopy", "haptics"] as const;
     if (parts.length === 1 || (parts.length === 2 && !endsWithSpace)) {
       const partial = endsWithSpace ? "" : (parts[1] ?? "").toLowerCase();
       const keyHit = keys.find((k) => k === partial);
@@ -230,9 +224,7 @@ export function getCompletions(
       return {
         title: `set ${key}`,
         base: `set ${key} `,
-        items: onOffItems().filter(
-          (i) => !partial || i.value.startsWith(partial),
-        ),
+        items: onOffItems().filter((i) => !partial || i.value.startsWith(partial)),
       };
     }
   }
@@ -247,6 +239,12 @@ export function getCompletions(
           label: "settings",
           detail: "show panel",
           tone: "bright",
+        },
+        {
+          value: "volume",
+          label: "volume",
+          detail: "sound level 0-100",
+          tone: "gold",
         },
         {
           value: "set vim on",
@@ -278,7 +276,39 @@ export function getCompletions(
           value: "set autocopy off",
           label: "set autocopy off",
         },
+        {
+          value: "set haptics on",
+          label: "set haptics on",
+          tone: "ok",
+        },
+        {
+          value: "set haptics off",
+          label: "set haptics off",
+        },
       ],
+    };
+  }
+
+  // volume <level|up|down|off|on>
+  if (cmd === "volume") {
+    const partial = endsWithSpace ? "" : (parts[1] ?? "").toLowerCase();
+    const levels = [
+      { value: "up", label: "up", detail: "+10", tone: "ok" },
+      { value: "down", label: "down", detail: "-10", tone: "ok" },
+      { value: "off", label: "off", detail: "mute", tone: "love" },
+      { value: "on", label: "on", detail: "50%", tone: "ok" },
+      ...[0, 25, 50, 75, 100].map((v) => ({
+        value: `${v}`,
+        label: `${v}%`,
+        detail: "level",
+        tone: "default" as const,
+      })),
+    ] satisfies CompletionItem[];
+    const items = levels.filter((i) => !partial || i.value.startsWith(partial));
+    return {
+      title: "volume — level",
+      base: "volume ",
+      items,
     };
   }
 
@@ -289,9 +319,7 @@ function blogItems(ctx: SuggestContext, partial: string): CompletionItem[] {
   return ctx.blogs
     .filter(
       (b) =>
-        !partial ||
-        b.slug.includes(partial) ||
-        (b.title?.toLowerCase().includes(partial) ?? false),
+        !partial || b.slug.includes(partial) || (b.title?.toLowerCase().includes(partial) ?? false),
     )
     .map((b) => ({
       value: b.slug,
@@ -311,6 +339,7 @@ function onOffItems(): CompletionItem[] {
 function commandDetail(n: string): string {
   const map: Record<string, string> = {
     help: "commands",
+    tour: "walkthrough",
     whoami: "identity",
     status: "availability",
     bio: "about",
@@ -323,6 +352,7 @@ function commandDetail(n: string): string {
     theme: "colors",
     settings: "preferences",
     set: "toggle option",
+    volume: "sound level",
     clear: "wipe screen",
     ls: "sections",
     neofetch: "sysinfo",
@@ -333,7 +363,8 @@ function commandDetail(n: string): string {
 function commandTone(n: string): CompletionItem["tone"] {
   if (n === "blog" || n === "blogs") return "foam";
   if (n === "theme") return "gold";
-  if (n === "contact") return "accent";
+  if (n === "volume") return "gold";
+  if (n === "contact" || n === "tour") return "accent";
   if (n === "clear") return "love";
   if (n === "help") return "bright";
   return "default";
@@ -366,8 +397,7 @@ export function tokenizeInput(value: string): {
   text: string;
 }[] {
   if (!value) return [];
-  const tokens: { kind: "cmd" | "arg" | "flag" | "unknown" | "space"; text: string }[] =
-    [];
+  const tokens: { kind: "cmd" | "arg" | "flag" | "unknown" | "space"; text: string }[] = [];
   const re = /(\s+)|(\S+)/g;
   let m: RegExpExecArray | null;
   let index = 0;

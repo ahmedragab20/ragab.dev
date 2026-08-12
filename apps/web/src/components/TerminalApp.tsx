@@ -18,11 +18,7 @@ import {
   type ShellSettings,
   type TextTone,
 } from "@ragab/ui";
-import {
-  DEFAULT_THEME,
-  themeNames,
-  type ThemeName,
-} from "@ragab/themes";
+import { DEFAULT_THEME, themeNames, type ThemeName } from "@ragab/themes";
 import {
   lazy,
   Suspense,
@@ -41,11 +37,8 @@ const TerminalProse = lazy(() =>
   import("@ragab/ui/prose").then((m) => ({ default: m.TerminalProse })),
 );
 import { site } from "../data/site";
-import {
-  appendHistory,
-  loadHistory,
-  persistHistory,
-} from "../lib/history";
+import { appendHistory, loadHistory, persistHistory } from "../lib/history";
+import { useHaptics } from "../lib/haptics";
 import {
   applyCompletion,
   applySuggestion,
@@ -66,10 +59,7 @@ export type ContentItem = {
   body?: string;
 };
 
-export type TerminalBoot =
-  | { mode: "home" }
-  | { mode: "blogs" }
-  | { mode: "blog"; slug: string };
+export type TerminalBoot = { mode: "home" } | { mode: "blogs" } | { mode: "blog"; slug: string };
 
 export type TerminalAppProps = {
   blogs: ContentItem[];
@@ -90,6 +80,8 @@ type TextEntry = {
   echo?: boolean;
   /** Theme name to preview on focus (commit only on Enter/click via action). */
   themePreview?: string;
+  /** Interactive volume row — ArrowLeft/ArrowRight adjust the sound level. */
+  volume?: boolean;
 };
 
 type ProseEntry = {
@@ -108,24 +100,22 @@ type TextDraft = Omit<TextEntry, "id" | "kind"> & { kind?: "text" };
 type ProseDraft = Omit<ProseEntry, "id" | "kind"> & { kind: "prose" };
 type Draft = TextDraft | ProseDraft;
 
-let lineId = 0;
-const nextId = () => {
-  lineId += 1;
-  return lineId;
-};
-
-function materialize(entries: Draft[]): OutEntry[] {
-  return entries.map((e) => {
-    if (e.kind === "prose") return { ...e, id: nextId() };
+/** IDs are index-based within a batch so SSR and client hydrate identically;
+ *  the live counter continues past the boot batch (see push). */
+function materialize(entries: Draft[], startId: number): OutEntry[] {
+  return entries.map((e, i) => {
+    const id = startId + i;
+    if (e.kind === "prose") return { ...e, id };
     return {
       kind: "text" as const,
-      id: nextId(),
+      id,
       text: e.text ?? "",
       tone: e.tone,
       action: e.action,
       href: e.href,
       echo: e.echo,
       themePreview: e.themePreview,
+      volume: e.volume,
     };
   });
 }
@@ -145,13 +135,12 @@ function PromptEcho({ cmd }: { cmd: string }) {
 }
 
 const DOCK_COMMANDS = [
-  { label: "help", cmd: "help" },
-  { label: "blogs", cmd: "blogs" },
-  { label: "news", cmd: "announcements" },
+  { label: "about", cmd: "whoami" },
+  { label: "projects", cmd: "projects" },
+  { label: "writing", cmd: "blogs" },
   { label: "contact", cmd: "contact" },
   { label: "themes", cmd: "theme list" },
-  { label: "settings", cmd: "settings" },
-  { label: "clear", cmd: "clear" },
+  { label: "help", cmd: "help" },
 ] as const;
 
 function isEditableTarget(el: EventTarget | null): boolean {
@@ -163,25 +152,37 @@ function isEditableTarget(el: EventTarget | null): boolean {
 }
 
 /** Boot buffer shared by SSR first paint + client (DEFAULT_THEME for hydration match). */
-function buildBootLines(
-  boot: TerminalBoot,
-  blogs: ContentItem[],
-  themeName: string,
-): Draft[] {
+function buildBootLines(boot: TerminalBoot, blogs: ContentItem[], themeName: string): Draft[] {
   if (boot.mode === "home") {
+    const writing =
+      blogs.length > 0 ? `notes on ai + web (${blogs.length})` : "notes on ai + web · soon";
     return [
       { text: "whoami", echo: true },
       { text: site.name, tone: "bright" },
-      { text: `${site.role} · ${site.location}`, tone: "gold" },
+      {
+        text: `${site.role} · ${site.location} · ● ${site.status}`,
+        tone: "gold",
+      },
       { text: "" },
       ...site.bio.map((l) => ({ text: l, tone: "foam" as const })),
+      { text: "" },
+      { text: "▸ about      who i am, what i do", action: "whoami" },
+      {
+        text: `▸ projects   selected work (${site.projects.length})`,
+        action: "projects",
+      },
+      { text: `▸ writing    ${writing}`, action: "blogs" },
+      {
+        text: "▸ contact    email · github · x · linkedin",
+        action: "contact",
+      },
       { text: "" },
       {
         text: `theme: ${themeName}  ·  ${themeNames.length} palettes`,
         tone: "dim",
       },
       {
-        text: "tip: Tab for chooser · help · blogs · contact",
+        text: "tip: click a row, or just type — Tab completes · tour for a walkthrough",
         tone: "accent",
       },
       { text: "" },
@@ -190,37 +191,25 @@ function buildBootLines(
   if (boot.mode === "blogs") {
     return [{ text: "blogs", echo: true }, ...listBlogs(blogs), { text: "" }];
   }
-  return [
-    { text: `blog ${boot.slug}`, echo: true },
-    ...readBlog(boot.slug, blogs),
-    { text: "" },
-  ];
+  return [{ text: `blog ${boot.slug}`, echo: true }, ...readBlog(boot.slug, blogs), { text: "" }];
 }
 
-function TerminalInner({
-  blogs,
-  announcements,
-  boot = { mode: "home" },
-}: TerminalAppProps) {
-  const {
-    theme,
-    activeTheme,
-    setTheme,
-    previewTheme,
-    cancelPreview,
-    randomTheme,
-    resetTheme,
-  } = useTheme();
+function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: TerminalAppProps) {
+  const { theme, activeTheme, setTheme, previewTheme, cancelPreview, randomTheme, resetTheme } =
+    useTheme();
   const { toast } = useToast();
 
   // Defaults only for SSR + first client paint — localStorage after mount
   // (avoids hydration mismatch when stored settings e.g. vim:true differ)
   const [settings, setSettingsState] = useState<ShellSettings>(DEFAULT_SETTINGS);
+  const haptics = useHaptics(settings);
   // SSR the boot banner so LCP is real content (not an empty log).
   // Name uses DEFAULT_THEME for SSR/hydrate match; colors come from CSS/boot script.
   const [lines, setLines] = useState<OutEntry[]>(() =>
-    materialize(buildBootLines(boot, blogs, DEFAULT_THEME)),
+    materialize(buildBootLines(boot, blogs, DEFAULT_THEME), 0),
   );
+  /** Runtime batches continue from here; boot ids are 0..lines.length-1. */
+  const nextLineId = useRef(lines.length);
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [vimMode, setVimMode] = useState<"insert" | "normal">("insert");
@@ -234,13 +223,8 @@ function TerminalInner({
   const lastCopy = useRef("");
   const [storageReady, setStorageReady] = useState(false);
   /** Boot / SSR lines stay still; only command output after mount animates (LCP). */
-  const bootMaxId = useRef(
-    lines.reduce((m, l) => Math.max(m, l.id), 0),
-  );
-  const shouldAnimate = useCallback(
-    (id: number) => id > bootMaxId.current,
-    [],
-  );
+  const bootMaxId = useRef(lines.reduce((m, l) => Math.max(m, l.id), 0));
+  const shouldAnimate = useCallback((id: number) => id > bootMaxId.current, []);
 
   // Before paint: restore prefs so vim/hint don't flash defaults → stored
   useLayoutEffect(() => {
@@ -264,7 +248,10 @@ function TerminalInner({
           const key = Object.keys(patch)[0] as keyof ShellSettings | undefined;
           if (key) {
             toast("settings", {
-              detail: `${key}: ${next[key] ? "on" : "off"}`,
+              detail:
+                key === "volume"
+                  ? `volume: ${next.volume}%`
+                  : `${key}: ${next[key] ? "on" : "off"}`,
               tone: "ok",
             });
           }
@@ -298,14 +285,16 @@ function TerminalInner({
         setMenuOpen(false);
         setMenuResult(null);
         toast("no matches", { tone: "warn", ms: 1400 });
+        haptics.warn();
         return false;
       }
       setMenuResult(result);
       setMenuIndex(0);
       setMenuOpen(true);
+      haptics.select();
       return true;
     },
-    [value, suggestCtx, toast],
+    [value, suggestCtx, toast, haptics],
   );
 
   const closeMenu = useCallback(() => {
@@ -320,7 +309,8 @@ function TerminalInner({
   }, [cancelPreview]);
 
   const push = useCallback((entries: Draft[]) => {
-    const mat = materialize(entries);
+    const mat = materialize(entries, nextLineId.current);
+    nextLineId.current += mat.length;
     setLines((prev) => [...prev, ...mat]);
     return mat;
   }, []);
@@ -331,16 +321,10 @@ function TerminalInner({
     if (!root) return [];
     const echoes = root.querySelectorAll(".ragab-echo");
     const lastEcho = echoes[echoes.length - 1] ?? null;
-    const all = [
-      ...root.querySelectorAll<HTMLElement>("[data-ragab-option]"),
-    ];
+    const all = [...root.querySelectorAll<HTMLElement>("[data-ragab-option]")];
     if (!lastEcho) return all;
     return all.filter(
-      (el) =>
-        !!(
-          lastEcho.compareDocumentPosition(el) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-        ),
+      (el) => !!(lastEcho.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING),
     );
   }, []);
 
@@ -356,9 +340,7 @@ function TerminalInner({
   /** Focus first clickable option in a just-rendered list (settings / blogs / themes). */
   const focusFirstOption = useCallback(
     (entries: OutEntry[]) => {
-      const first = entries.find(
-        (e) => e.kind === "text" && (e.action || e.href),
-      );
+      const first = entries.find((e) => e.kind === "text" && (e.action || e.href));
       if (!first || first.kind !== "text") return;
       // Wait for DOM paint after setState
       requestAnimationFrame(() => {
@@ -381,10 +363,11 @@ function TerminalInner({
     if (!options.length) return false;
     const el = options[0]!;
     el.focus();
+    haptics.select();
     el.scrollIntoView({ block: "nearest" });
     previewFromEl(el);
     return true;
-  }, [getLatestOptions, previewFromEl]);
+  }, [getLatestOptions, previewFromEl, haptics]);
 
   const onOptionKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {
@@ -403,6 +386,7 @@ function TerminalInner({
         next?.focus();
         next?.scrollIntoView({ block: "nearest" });
         previewFromEl(next);
+        haptics.select();
         return;
       }
       if (e.key === "ArrowUp" || e.key === "k") {
@@ -416,6 +400,27 @@ function TerminalInner({
         prev?.focus();
         prev?.scrollIntoView({ block: "nearest" });
         previewFromEl(prev);
+        haptics.select();
+        return;
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        // Volume rows scrub the sound level left/right with immediate audio
+        if (!current.hasAttribute("data-ragab-volume")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const delta = e.key === "ArrowRight" ? 10 : -10;
+        const next = Math.max(0, Math.min(100, settings.volume + delta));
+        if (next === settings.volume) return;
+        updateSettings({ volume: next }, true);
+        haptics.fireAt("light", next / 100);
+        // Patch every volume row in place so the label tracks the level
+        setLines((prev) =>
+          prev.map((l) =>
+            l.kind === "text" && l.volume
+              ? { ...l, text: volumeRowText(next), action: volumeRowAction(next) }
+              : l,
+          ),
+        );
         return;
       }
       if (e.key === "Escape" || e.key === "q") {
@@ -423,9 +428,16 @@ function TerminalInner({
         e.stopPropagation();
         focusPrompt(); // cancelPreview inside
       }
-      // Enter / Space: native button activation → commits via action
+      if (e.key === "Enter" || e.key === " ") {
+        // Native button activation is disrupted by the global type-to-focus
+        // handler (it moves focus to the prompt on Enter) — fire it directly.
+        e.preventDefault();
+        e.stopPropagation();
+        current.click();
+        return;
+      }
     },
-    [focusPrompt, getLatestOptions, previewFromEl],
+    [focusPrompt, getLatestOptions, previewFromEl, settings, updateSettings, haptics, setLines],
   );
 
   const onOptionFocus = useCallback(
@@ -480,6 +492,7 @@ function TerminalInner({
       lastCopy.current = text;
       void navigator.clipboard.writeText(text).then(
         () => {
+          haptics.success();
           toast("copied", {
             detail: text.length > 48 ? `${text.slice(0, 48)}…` : text,
             tone: "ok",
@@ -498,13 +511,16 @@ function TerminalInner({
       document.removeEventListener("mouseup", onSel);
       document.removeEventListener("keyup", onSel);
     };
-  }, [settings.autoCopy, toast]);
+  }, [settings.autoCopy, toast, haptics]);
 
   // Global type-to-focus (unless another field is focused)
   useEffect(() => {
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isEditableTarget(e.target) && e.target !== inputRef.current) return;
+      // Interactive controls (row buttons, links) own their Enter — don't
+      // yank focus to the prompt before their native activation fires.
+      if (e.key === "Enter" && (e.target as HTMLElement).closest?.("button, a")) return;
 
       const input = inputRef.current;
       if (!input) return;
@@ -536,6 +552,7 @@ function TerminalInner({
           return;
         }
         setValue((v) => v + e.key);
+        haptics.type();
       } else if (
         e.key === "Backspace" ||
         e.key === "ArrowUp" ||
@@ -548,7 +565,7 @@ function TerminalInner({
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [settings.vim, vimMode]);
+  }, [settings.vim, vimMode, haptics]);
 
   // Vim badge click (mouse)
   useEffect(() => {
@@ -559,11 +576,12 @@ function TerminalInner({
         toast("vim", { detail: `${next} mode`, ms: 1200 });
         return next;
       });
+      haptics.select();
       focusPrompt();
     };
     document.addEventListener("ragab:vim-toggle", onToggle);
     return () => document.removeEventListener("ragab:vim-toggle", onToggle);
-  }, [settings.vim, toast, focusPrompt]);
+  }, [settings.vim, toast, focusPrompt, haptics]);
 
   const run = useCallback(
     (raw: string) => {
@@ -588,7 +606,14 @@ function TerminalInner({
         resetTheme,
         settings,
         updateSettings,
+        hapticsSupported: haptics.supported,
       });
+
+      // Haptic feedback for the executed command, derived from its output tone
+      if (out?.some((l) => l.kind !== "prose" && l.tone === "err")) haptics.error();
+      else if (out?.some((l) => l.kind === "prose")) haptics.nav();
+      else if (out?.some((l) => l.kind !== "prose" && l.tone === "ok")) haptics.success();
+      else haptics.tap();
 
       if (out === null) {
         setLines([]);
@@ -596,9 +621,7 @@ function TerminalInner({
         return;
       }
       const mat = push([...out, { text: "" }]);
-      const hasOptions = mat.some(
-        (e) => e.kind === "text" && (e.action || e.href),
-      );
+      const hasOptions = mat.some((e) => e.kind === "text" && (e.action || e.href));
       if (hasOptions) {
         focusFirstOption(mat);
       } else {
@@ -615,6 +638,7 @@ function TerminalInner({
       randomTheme,
       resetTheme,
       setTheme,
+      haptics,
       settings,
       theme,
       updateSettings,
@@ -624,6 +648,7 @@ function TerminalInner({
   const selectCompletionStable = useCallback(
     (item: CompletionItem) => {
       if (!menuResult) return;
+      haptics.select();
       // Always fill the prompt — never auto-execute (Enter runs)
       const next = applyCompletion(value, menuResult, item);
       closeMenu();
@@ -641,7 +666,7 @@ function TerminalInner({
       });
       focusPrompt();
     },
-    [menuResult, value, closeMenu, suggestCtx, focusPrompt],
+    [menuResult, value, closeMenu, suggestCtx, focusPrompt, haptics],
   );
 
   const inputTokens = useMemo(() => tokenizeInput(value), [value]);
@@ -657,13 +682,13 @@ function TerminalInner({
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setMenuIndex((i) => (i + 1) % menuResult.items.length);
+        haptics.select();
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setMenuIndex((i) =>
-          i <= 0 ? menuResult.items.length - 1 : i - 1,
-        );
+        setMenuIndex((i) => (i <= 0 ? menuResult.items.length - 1 : i - 1));
+        haptics.select();
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
@@ -679,10 +704,12 @@ function TerminalInner({
       e.preventDefault();
       if (e.key === "i") {
         setVimMode("insert");
+        haptics.select();
         return;
       }
       if (e.key === "a" || e.key === "I" || e.key === "A") {
         setVimMode("insert");
+        haptics.select();
         return;
       }
       if (e.key === "D" || e.key === "x" || e.key === "C") {
@@ -701,6 +728,7 @@ function TerminalInner({
         if (histIdx.current === -1) draft.current = value;
         histIdx.current = Math.min(histIdx.current + 1, history.length - 1);
         setValue(history[history.length - 1 - histIdx.current] ?? "");
+        haptics.select();
         return;
       }
       if (e.key === "j" || e.key === "ArrowDown") {
@@ -711,9 +739,11 @@ function TerminalInner({
         if (histIdx.current <= 0) {
           histIdx.current = -1;
           setValue(draft.current);
+          haptics.select();
         } else {
           histIdx.current -= 1;
           setValue(history[history.length - 1 - histIdx.current] ?? "");
+          haptics.select();
         }
         return;
       }
@@ -728,6 +758,7 @@ function TerminalInner({
       }
       setVimMode("normal");
       toast("vim", { detail: "normal mode", ms: 1200 });
+      haptics.select();
       return;
     }
 
@@ -750,12 +781,14 @@ function TerminalInner({
     } else if (e.key === "ArrowRight" && suggestion && isCaretAtEnd(e.currentTarget)) {
       e.preventDefault();
       setValue(applySuggestion(value, suggestion));
+      haptics.select();
     } else if (e.key === "ArrowUp" && !menuOpen) {
       e.preventDefault();
       if (!history.length) return;
       if (histIdx.current === -1) draft.current = value;
       histIdx.current = Math.min(histIdx.current + 1, history.length - 1);
       setValue(history[history.length - 1 - histIdx.current] ?? "");
+      haptics.select();
     } else if (e.key === "ArrowDown" && !menuOpen) {
       e.preventDefault();
       // At live prompt (not browsing history) → re-enter latest option list
@@ -766,13 +799,16 @@ function TerminalInner({
       if (histIdx.current <= 0) {
         histIdx.current = -1;
         setValue(draft.current);
+        haptics.select();
       } else {
         histIdx.current -= 1;
         setValue(history[history.length - 1 - histIdx.current] ?? "");
+        haptics.select();
       }
     } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       setLines([]);
+      haptics.tap();
     } else if (e.key.length === 1 || e.key === "Backspace") {
       // typing closes menu so results refresh on next Tab
       if (menuOpen) closeMenu();
@@ -823,9 +859,7 @@ function TerminalInner({
                   <div className="ragab-article__meta">
                     <span className="ragab-text--gold">{l.date}</span>
                     {l.tags?.length ? (
-                      <span className="ragab-text--foam">
-                        {`  ·  ${l.tags.join(" · ")}`}
-                      </span>
+                      <span className="ragab-text--foam">{`  ·  ${l.tags.join(" · ")}`}</span>
                     ) : null}
                     <span className="ragab-text--dim">{`  ·  ${l.slug}`}</span>
                     {"  ·  "}
@@ -834,6 +868,7 @@ function TerminalInner({
                       className="ragab-hint-cmd"
                       onClick={(e) => {
                         e.stopPropagation();
+                        haptics.nav();
                         window.open(`/blog/${l.slug}`, "_self");
                       }}
                     >
@@ -863,12 +898,13 @@ function TerminalInner({
               data-ragab-option={l.id}
               className={`ragab-line ragab-text ragab-line--link${
                 shouldAnimate(l.id) ? " ragab-line--animate" : ""
-              }${
-                l.tone && l.tone !== "default" ? ` ragab-text--${l.tone}` : ""
-              }`}
+              }${l.tone && l.tone !== "default" ? ` ragab-text--${l.tone}` : ""}`}
               target={l.href.startsWith("http") ? "_blank" : undefined}
               rel={l.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                haptics.nav();
+              }}
               onKeyDown={onOptionKeyDown}
             >
               <OutputText text={l.text || " "} />
@@ -879,11 +915,10 @@ function TerminalInner({
               type="button"
               data-ragab-option={l.id}
               data-theme-preview={l.themePreview || undefined}
+              data-ragab-volume={l.volume ? "1" : undefined}
               className={`ragab-line ragab-text ragab-line--action${
                 shouldAnimate(l.id) ? " ragab-line--animate" : ""
-              }${
-                l.tone && l.tone !== "default" ? ` ragab-text--${l.tone}` : ""
-              }`}
+              }${l.tone && l.tone !== "default" ? ` ragab-text--${l.tone}` : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
                 // Commit via action (theme X persists); clear preview flag first
@@ -917,13 +952,12 @@ function TerminalInner({
           vimMode={settings.vim ? vimMode : null}
           tokens={inputTokens}
           suggestion={
-            settings.suggest && (!settings.vim || vimMode === "insert")
-              ? suggestion
-              : undefined
+            settings.suggest && (!settings.vim || vimMode === "insert") ? suggestion : undefined
           }
           onAcceptSuggestion={() => {
             if (!suggestion) return;
             setValue(applySuggestion(value, suggestion));
+            haptics.select();
             focusPrompt();
           }}
           inputProps={{
@@ -931,6 +965,7 @@ function TerminalInner({
             value,
             onChange: (e) => {
               if (settings.vim && vimMode === "normal") return;
+              if (e.target.value.length > value.length) haptics.type();
               setValue(e.target.value);
             },
             onKeyDown,
@@ -956,6 +991,7 @@ function TerminalInner({
       </div>
       <Hint
         commands={[
+          "tour",
           "help",
           "blogs",
           "settings",
@@ -996,6 +1032,8 @@ type Ctx = {
   resetTheme: () => ThemeName;
   settings: ShellSettings;
   updateSettings: (patch: Partial<ShellSettings>, quiet?: boolean) => void;
+  /** Vibration API available on this device? */
+  hapticsSupported: boolean;
 };
 
 function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
@@ -1007,10 +1045,27 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
     case "me":
       return [
         { text: site.name, tone: "bright" },
-        { text: `${site.role} · ${site.location}`, tone: "gold" },
+        {
+          text: `${site.role} · ${site.location} · ● ${site.status}`,
+          tone: "gold",
+        },
         { text: "" },
         ...site.bio.map((l) => ({ text: l, tone: "foam" as const })),
+        ...(site.experience?.length
+          ? [
+              { text: "" },
+              { text: "work history", tone: "gold" as const },
+              ...site.experience.map((e) => ({
+                text: `  ${e.role} @ ${e.org}${e.period ? `  ·  ${e.period}` : ""}`,
+                tone: "muted" as const,
+              })),
+            ]
+          : []),
+        { text: "" },
+        { text: "stack · projects · contact for more", tone: "dim" },
       ];
+    case "tour":
+      return tourLines();
     case "status": {
       const time = new Date().toLocaleTimeString("en-GB", {
         hour: "2-digit",
@@ -1034,6 +1089,7 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
         ...(i ? [{ text: "" }] : []),
         { text: `→ ${p.name}`, tone: "bright" as const },
         { text: `  ${p.description}`, tone: "muted" as const },
+        ...(p.tech?.length ? [{ text: `  ${p.tech.join(" · ")}`, tone: "gold" as const }] : []),
         ...(p.url ? [{ text: `  ${p.url}`, tone: "foam" as const, href: p.url }] : []),
       ]);
     case "blogs":
@@ -1091,11 +1147,14 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
     case "theme":
       return themeCommand(args, ctx);
     case "settings":
-      return settingsLines(ctx.settings);
+      return settingsLines(ctx.settings, ctx.hapticsSupported);
     case "set":
       return setCommand(args, ctx);
+    case "volume":
+      return volumeCommand(args, ctx);
     case "ls":
       return [
+        "tour",
         "whoami",
         "status",
         "bio",
@@ -1106,6 +1165,7 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
         "contact",
         "theme",
         "settings",
+        "volume",
       ].map((n) => ({ text: `drwxr-xr-x  ${n}` }));
     case "neofetch":
       return [
@@ -1131,14 +1191,48 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
     default:
       return [
         { text: `command not found: ${key}`, tone: "err" },
-        { text: "type 'help' for available commands.", tone: "dim" },
+        { text: "help for commands · tour for a walkthrough", tone: "dim" },
       ];
   }
+}
+
+function tourLines(): Draft[] {
+  const steps: { label: string; desc: string; cmd: string }[] = [
+    { label: "whoami", desc: "who i am — role, bio, work history", cmd: "whoami" },
+    { label: "projects", desc: "selected work — ai tooling, web, rust", cmd: "projects" },
+    { label: "blogs", desc: "writing on ai + web", cmd: "blogs" },
+    {
+      label: "theme list",
+      desc: "66 palettes — focus a row to preview, enter to set",
+      cmd: "theme list",
+    },
+    { label: "settings", desc: "vim, suggestions, auto-copy, haptics, volume", cmd: "settings" },
+    { label: "contact", desc: "email · github · x · linkedin", cmd: "contact" },
+  ];
+  return [
+    { text: "tour — a 20s walkthrough · click any try row", tone: "bright" },
+    { text: "" },
+    ...steps.flatMap((s, i): Draft[] => {
+      const rows: Draft[] = [
+        { text: `${i + 1}/6  ${s.label}`, tone: "gold" },
+        { text: `     ${s.desc}`, tone: "muted" },
+        { text: `     → try: ${s.cmd}`, action: s.cmd, tone: "accent" },
+      ];
+      if (i < steps.length - 1) rows.push({ text: "" });
+      return rows;
+    }),
+    { text: "" },
+    {
+      text: "power moves: Tab = chooser · ↑↓ = history · click rows to run · ctrl+l clears",
+      tone: "dim",
+    },
+  ];
 }
 
 function helpLines(settings: ShellSettings): Draft[] {
   return [
     { text: "ragab.dev — classic terminal", tone: "bright" },
+    { text: "new here? tour takes 20 seconds", tone: "accent" },
     { text: "" },
     { text: "identity", tone: "gold" },
     { text: "  whoami · status · bio · stack · projects", tone: "foam" },
@@ -1150,7 +1244,7 @@ function helpLines(settings: ShellSettings): Draft[] {
     { text: "theme & settings", tone: "gold" },
     { text: "  theme list · theme <name> · theme random", tone: "foam" },
     {
-      text: "  settings · set vim|suggest|autocopy on|off",
+      text: "  settings · set vim|suggest|autocopy|haptics on|off · volume <0-100>",
       tone: "foam",
     },
     { text: "" },
@@ -1158,13 +1252,15 @@ function helpLines(settings: ShellSettings): Draft[] {
     { text: "  clear · ls · neofetch · help · Tab = chooser", tone: "foam" },
     { text: "" },
     {
-      text: `vim: ${settings.vim ? "on (esc=normal, i=insert)" : "off"} · select text to copy`,
+      text: `vim: ${settings.vim ? "on (esc=normal, i=insert)" : "off"} · haptics: ${
+        settings.haptics ? "on" : "off"
+      } · volume: ${settings.volume}% · select text to copy`,
       tone: "dim",
     },
   ];
 }
 
-function settingsLines(s: ShellSettings): Draft[] {
+function settingsLines(s: ShellSettings, hapticsSupported = true): Draft[] {
   // Whole-line tone left neutral so OutputText can highlight keys / on|off finely
   return [
     { text: "settings  ·  click a row to toggle", tone: "bright" },
@@ -1181,8 +1277,25 @@ function settingsLines(s: ShellSettings): Draft[] {
       text: `  autocopy   ${s.autoCopy ? "on" : "off"}  ·  click to toggle`,
       action: `set autocopy ${s.autoCopy ? "off" : "on"}`,
     },
+    {
+      text: `  haptics    ${s.haptics ? "on" : "off"}  ·  click to toggle`,
+      action: `set haptics ${s.haptics ? "off" : "on"}`,
+    },
+    {
+      text: volumeRowText(s.volume),
+      action: volumeRowAction(s.volume),
+      volume: true,
+    },
     { text: "" },
     { text: "persisted in localStorage · Tab also opens choosers", tone: "dim" },
+    ...(hapticsSupported
+      ? []
+      : [
+          {
+            text: "note: this device can't vibrate — desktop plays click sounds instead",
+            tone: "dim" as const,
+          },
+        ]),
   ];
 }
 
@@ -1194,15 +1307,16 @@ function setCommand(args: string[], ctx: Ctx): Draft[] {
 
   if (!key) {
     return [
-      { text: "usage: set <vim|suggest|autocopy> <on|off>", tone: "gold" },
-      ...settingsLines(ctx.settings),
+      {
+        text: "usage: set <vim|suggest|autocopy|haptics> <on|off> · volume <0-100>",
+        tone: "gold",
+      },
+      ...settingsLines(ctx.settings, ctx.hapticsSupported),
     ];
   }
 
   if (!on && !off) {
-    return [
-      { text: `usage: set ${key} on|off`, tone: "err" },
-    ];
+    return [{ text: `usage: set ${key} on|off`, tone: "err" }];
   }
 
   const value = on;
@@ -1218,10 +1332,72 @@ function setCommand(args: string[], ctx: Ctx): Draft[] {
     ctx.updateSettings({ autoCopy: value });
     return [{ text: `autocopy → ${value ? "on" : "off"}`, tone: "ok" }];
   }
+  if (key === "haptics" || key === "vibrate" || key === "vibration") {
+    ctx.updateSettings({ haptics: value });
+    return [{ text: `haptics → ${value ? "on" : "off"}`, tone: "ok" }];
+  }
 
   return [
     { text: `unknown setting: ${key}`, tone: "err" },
-    { text: "keys: vim · suggest · autocopy", tone: "dim" },
+    {
+      text: "keys: vim · suggest · autocopy · haptics — volume is 0-100, use volume <n>",
+      tone: "dim",
+    },
+  ];
+}
+
+/** 0-100 → 20-cell █/░ bar for terminal volume display. */
+function volumeBar(v: number): string {
+  const level = Math.round(v / 5);
+  return "█".repeat(level) + "░".repeat(20 - level);
+}
+
+/** Shared label for interactive volume rows (settings panel + volume output). */
+function volumeRowText(v: number): string {
+  return `volume  ${v}%  ${volumeBar(v)}  ·  ← → adjust`;
+}
+
+/** Click cycles 0 → 25 → … → 100 → 0; arrows scrub ±10. */
+function volumeRowAction(v: number): string {
+  return `volume ${v >= 100 ? 0 : v + 25}`;
+}
+
+function volumeCommand(args: string[], ctx: Ctx): Draft[] {
+  const raw = (args[0] || "").toLowerCase();
+  const current = ctx.settings.volume;
+
+  if (!raw) {
+    return [
+      {
+        text: volumeRowText(current),
+        tone: "bright",
+        action: volumeRowAction(current),
+        volume: true,
+      },
+      { text: "usage: volume <0-100> · volume up|down · volume off|on", tone: "dim" },
+    ];
+  }
+
+  let next: number;
+  if (raw === "up" || raw === "+") next = Math.min(100, current + 10);
+  else if (raw === "down" || raw === "-") next = Math.max(0, current - 10);
+  else if (raw === "off" || raw === "mute") next = 0;
+  else if (raw === "on") next = current > 0 ? current : 50;
+  else {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) {
+      return [{ text: "usage: volume <0-100> · volume up|down · volume off|on", tone: "err" }];
+    }
+    next = Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  ctx.updateSettings({ volume: next });
+  return [
+    { text: `volume → ${next}%  ${volumeBar(next)}`, tone: "ok" },
+    {
+      text: next === 0 ? "muted — haptics silent" : "sound level updated",
+      tone: "dim",
+    },
   ];
 }
 
@@ -1267,15 +1443,10 @@ function listBlogs(blogs: ContentItem[]): Draft[] {
   return lines;
 }
 
-function findBlog(
-  slug: string | undefined,
-  blogs: ContentItem[],
-): ContentItem | undefined {
+function findBlog(slug: string | undefined, blogs: ContentItem[]): ContentItem | undefined {
   if (!slug) return undefined;
   const q = slug.toLowerCase();
-  return blogs.find(
-    (p) => p.slug === q || p.slug.startsWith(q) || p.slug.includes(q),
-  );
+  return blogs.find((p) => p.slug === q || p.slug.startsWith(q) || p.slug.includes(q));
 }
 
 function readBlog(slug: string | undefined, blogs: ContentItem[]): Draft[] {
@@ -1321,10 +1492,7 @@ function listAnnouncements(items: ContentItem[]): Draft[] {
     if (!!a.pinned === !!b.pinned) return b.date.localeCompare(a.date);
     return a.pinned ? -1 : 1;
   });
-  const lines: Draft[] = [
-    { text: "announcements", tone: "bright" },
-    { text: "" },
-  ];
+  const lines: Draft[] = [{ text: "announcements", tone: "bright" }, { text: "" }];
   for (const a of sorted) {
     lines.push({
       text: `${a.pinned ? "●" : "○"} ${a.title}${a.pinned ? " ✦" : ""}`,
