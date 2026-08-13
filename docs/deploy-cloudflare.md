@@ -47,6 +47,8 @@ You can attach custom domains before or after the first deploy; Pages/Workers wi
 4. **Zone Resources** → include `ragab.dev` if DNS permission is set.  
 5. Create token → **copy once** (you won’t see it again).
 
+Store the token as a GitHub Actions secret named `CLOUDFLARE_API_TOKEN` on the environment the Deploy workflow uses (currently a GitHub environment also named `CLOUDFLARE_API_TOKEN`). A token without **Cloudflare Pages → Edit** verifies as active but returns `Authentication error [code: 10000]` on `wrangler pages deploy`.
+
 ---
 
 ## 4. Create the Pages project (first time)

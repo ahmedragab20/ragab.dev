@@ -38,20 +38,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check Cloudflare credentials
+        id: creds
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          missing=0
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN secret is missing"
-            missing=1
+            exit 1
           fi
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::error::CLOUDFLARE_ACCOUNT_ID secret is missing (required — Pages cannot infer the account from this API token)"
-            missing=1
-          fi
-          if [ "$missing" -ne 0 ]; then
             exit 1
           fi
           verify=$(curl -sS https://api.cloudflare.com/client/v4/user/tokens/verify \
@@ -64,9 +61,11 @@ jobs:
           pages=$(curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/ragab-web" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")
           echo "$pages" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("pages project:", d.get("success"), (d.get("result") or {}).get("name") or d.get("errors"))'
-          if ! echo "$pages" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin).get("success") else 1)'; then
-            echo "::error::Token cannot access Pages project ragab-web. Grant Account → Cloudflare Pages → Edit on this account."
-            exit 1
+          if echo "$pages" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin).get("success") else 1)'; then
+            echo "pages_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pages_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Token cannot access Pages project ragab-web. Add Account → Cloudflare Pages → Edit, then re-run Deploy."
           fi
 
       - name: Lint
@@ -76,6 +75,7 @@ jobs:
         run: pnpm --filter @ragab/web build
 
       - name: Deploy web (Cloudflare Pages)
+        if: steps.creds.outputs.pages_ok == 'true'
         working-directory: apps/web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -88,3 +88,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler deploy
+
+      - name: Fail if Pages credentials are insufficient
+        if: steps.creds.outputs.pages_ok != 'true'
+        run: |
+          echo "::error::CLOUDFLARE_API_TOKEN is active but lacks Account → Cloudflare Pages → Edit. Site was not deployed from CI."
+          exit 1
