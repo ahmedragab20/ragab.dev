@@ -77,7 +77,7 @@ In the GitHub repo: **Settings → Secrets and variables → Actions → New rep
 | Secret name | Value |
 | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | Token from step 3 |
-| `CLOUDFLARE_ACCOUNT_ID` | Account ID from step 1 |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID from step 1 (also pinned as `account_id` in each app `wrangler.toml`) |
 
 Optional: create a GitHub **Environment** named `production` (used by `deploy.yml`) under **Settings → Environments**, and put the secrets there instead for extra protection (required reviewers, etc.).
 
@@ -158,6 +158,7 @@ Or **Actions → Deploy → Run workflow**.
 | Issue | Fix |
 | --- | --- |
 | `Authentication error [code: 10000]` | Token missing Pages/Workers edit, or wrong account |
+| `Failed to automatically retrieve account IDs` | Token cannot list accounts. Set repo secret `CLOUDFLARE_ACCOUNT_ID` or keep `account_id` in `wrangler.toml` |
 | `Project not found` | Create `ragab-web` once (step 4) or rename deploy flag to match |
 | Build fails on `@ragab/ui` | Always `pnpm install` from monorepo root |
 | Domain pending | Nameservers not updated / DNS still propagating |

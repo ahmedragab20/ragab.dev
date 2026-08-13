@@ -1,6 +1,7 @@
 # Cloudflare Workers/Pages config for @ragab/web (Astro)
 # Deployed from monorepo root via: pnpm --filter @ragab/web deploy
 name = "ragab-web"
+account_id = "81732c716fa7cf3c36f9273922c49c4c"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 

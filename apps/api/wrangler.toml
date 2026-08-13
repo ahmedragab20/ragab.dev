@@ -1,4 +1,5 @@
 name = "ragab-api"
+account_id = "81732c716fa7cf3c36f9273922c49c4c"
 main = "src/index.ts"
 compatibility_date = "2025-07-01"
 
