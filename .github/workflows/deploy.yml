@@ -12,8 +12,9 @@ jobs:
     name: Deploy to Cloudflare
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Only deploy from main (workflow_dispatch allowed)
-    environment: production
+    # Only deploy from main (workflow_dispatch allowed).
+    # Token lives on this environment (created as a named env rather than a repo secret).
+    environment: CLOUDFLARE_API_TOKEN
 
     permissions:
       contents: read
@@ -50,7 +51,23 @@ jobs:
             echo "::error::CLOUDFLARE_ACCOUNT_ID secret is missing (required — Pages cannot infer the account from this API token)"
             missing=1
           fi
-          exit "$missing"
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          verify=$(curl -sS https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")
+          echo "$verify" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("token verify:", d.get("success"), d.get("errors") or d.get("result",{}).get("status"))'
+          if ! echo "$verify" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin).get("success") else 1)'; then
+            echo "::error::CLOUDFLARE_API_TOKEN is invalid or expired. Create a new token (Edit Cloudflare Workers + Account Pages Edit) and set the secret."
+            exit 1
+          fi
+          pages=$(curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/ragab-web" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")
+          echo "$pages" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("pages project:", d.get("success"), (d.get("result") or {}).get("name") or d.get("errors"))'
+          if ! echo "$pages" | python3 -c 'import json,sys; raise SystemExit(0 if json.load(sys.stdin).get("success") else 1)'; then
+            echo "::error::Token cannot access Pages project ragab-web. Grant Account → Cloudflare Pages → Edit on this account."
+            exit 1
+          fi
 
       - name: Lint
         run: pnpm lint
