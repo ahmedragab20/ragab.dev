@@ -74,6 +74,7 @@ export function BrowseApp({ blogs, onOpenTerminal }: BrowseAppProps) {
           {hasWork ? <a href="#browse-work">work</a> : null}
           <a href="#browse-writing">writing</a>
           <a href="#browse-projects">projects</a>
+          <a href="#browse-tools">tooling</a>
           <a href="#browse-contact">contact</a>
           <a href="#browse-theme">theme</a>
         </nav>
@@ -175,6 +176,54 @@ export function BrowseApp({ blogs, onOpenTerminal }: BrowseAppProps) {
                     <a
                       className="ragab-browse__item"
                       href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {body}
+                      <NewTabHint />
+                    </a>
+                  ) : (
+                    <div className="ragab-browse__item ragab-browse__static">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section className="ragab-browse__section" aria-labelledby="browse-tools">
+          <h2 id="browse-tools" className="ragab-browse__section-title">
+            tooling
+          </h2>
+          <ul className="ragab-browse__list">
+            {(site.tools ?? []).map((t) => {
+              const body = (
+                <>
+                  <span className="ragab-browse__item-title">{t.name}</span>
+                  <span className="ragab-browse__item-meta">
+                    {t.category} · {t.tagline}
+                  </span>
+                  {t.description ? (
+                    <span className="ragab-browse__item-desc">{t.description}</span>
+                  ) : null}
+                  {t.tech?.length ? (
+                    <span className="ragab-browse__item-tags">{t.tech.join(" · ")}</span>
+                  ) : null}
+                  {t.note?.length
+                    ? t.note.map((n) => (
+                        <span key={n} className="ragab-browse__item-desc">
+                          {n}
+                        </span>
+                      ))
+                    : null}
+                </>
+              );
+              return (
+                <li key={t.name}>
+                  {t.url ? (
+                    <a
+                      className="ragab-browse__item"
+                      href={t.url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >

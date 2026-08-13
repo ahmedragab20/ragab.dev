@@ -10,6 +10,8 @@ export const COMMANDS = [
   "bio",
   "stack",
   "projects",
+  "tools",
+  "tool",
   "blogs",
   "blog",
   "announcements",
@@ -26,10 +28,11 @@ export const COMMANDS = [
 export const COMMAND_SET = new Set<string>(COMMANDS);
 
 /** Commands that take further arguments (show trailing space when filled). */
-const NEEDS_ARGS = new Set(["blog", "post", "read", "theme", "set", "volume"]);
+const NEEDS_ARGS = new Set(["blog", "post", "read", "theme", "set", "volume", "tool"]);
 
 export type SuggestContext = {
   blogs: { slug: string; title?: string; date?: string }[];
+  tools?: { name: string; tagline?: string }[];
 };
 
 export type CompletionResult = {
@@ -146,6 +149,30 @@ export function getCompletions(value: string, ctx: SuggestContext): CompletionRe
     return {
       title: "blog — choose a post",
       base: `${cmd} `,
+      items,
+    };
+  }
+
+  // tool <name>
+  if (cmd === "tool") {
+    const partial = endsWithSpace ? "" : (parts[1] ?? "").toLowerCase();
+    const items: CompletionItem[] = (ctx.tools ?? [])
+      .filter(
+        (t) =>
+          !partial ||
+          t.name.toLowerCase().startsWith(partial) ||
+          (t.tagline?.toLowerCase().includes(partial) ?? false),
+      )
+      .map((t) => ({
+        value: t.name,
+        label: t.name,
+        detail: t.tagline,
+        tone: "foam" as const,
+      }));
+    if (items.length === 0) return null;
+    return {
+      title: "tool — choose",
+      base: "tool ",
       items,
     };
   }
@@ -347,6 +374,8 @@ function commandDetail(n: string): string {
     bio: "about",
     stack: "tech",
     projects: "work",
+    tools: "daily tools",
+    tool: "tool details",
     blogs: "all posts",
     blog: "read post",
     announcements: "news",
@@ -365,6 +394,8 @@ function commandDetail(n: string): string {
 function commandTone(n: string): CompletionItem["tone"] {
   if (n === "blog" || n === "blogs") return "foam";
   if (n === "theme") return "gold";
+  if (n === "tools") return "gold";
+  if (n === "tool") return "foam";
   if (n === "volume") return "gold";
   if (n === "contact" || n === "tour" || n === "browse") return "accent";
   if (n === "clear") return "love";

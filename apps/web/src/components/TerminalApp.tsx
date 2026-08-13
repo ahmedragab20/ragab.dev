@@ -179,6 +179,10 @@ function buildBootLines(boot: TerminalBoot, blogs: ContentItem[], themeName: str
         text: `▸ projects   selected work (${site.projects.length})`,
         action: "projects",
       },
+      {
+        text: `▸ tools      daily toolchain (${site.tools?.length ?? 0})`,
+        action: "tools",
+      },
       { text: `▸ writing    ${writing}`, action: "blogs" },
       {
         text: "▸ contact    email · github · x · linkedin",
@@ -283,6 +287,7 @@ function TerminalInner({
         title: b.title,
         date: b.date,
       })),
+      tools: site.tools ?? [],
     }),
     [blogs],
   );
@@ -1176,6 +1181,11 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
         ...(p.tech?.length ? [{ text: `  ${p.tech.join(" · ")}`, tone: "gold" as const }] : []),
         ...(p.url ? [{ text: `  ${p.url}`, tone: "foam" as const, href: p.url }] : []),
       ]);
+    case "tools":
+    case "tooling":
+      return listTools();
+    case "tool":
+      return readTool(args[0]);
     case "blogs":
     case "posts":
       return listBlogs(ctx.blogs);
@@ -1245,6 +1255,8 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
         "bio",
         "stack",
         "projects",
+        "tools",
+        "tool",
         "blogs",
         "announcements",
         "contact",
@@ -1288,6 +1300,7 @@ function tourLines(): Draft[] {
   const steps: { label: string; desc: string; cmd: string }[] = [
     { label: "whoami", desc: "who i am — role, bio, work history", cmd: "whoami" },
     { label: "projects", desc: "selected work — ai tooling, web, rust", cmd: "projects" },
+    { label: "tools", desc: "the daily toolchain — nvim, pi, herdr, ghostty", cmd: "tools" },
     { label: "blogs", desc: "writing on ai + web", cmd: "blogs" },
     {
       label: "theme list",
@@ -1302,7 +1315,7 @@ function tourLines(): Draft[] {
     { text: "" },
     ...steps.flatMap((s, i): Draft[] => {
       const rows: Draft[] = [
-        { text: `${i + 1}/6  ${s.label}`, tone: "gold" },
+        { text: `${i + 1}/7  ${s.label}`, tone: "gold" },
         { text: `     ${s.desc}`, tone: "muted" },
         { text: `     → try: ${s.cmd}`, action: s.cmd, tone: "accent" },
       ];
@@ -1323,7 +1336,7 @@ function helpLines(settings: ShellSettings): Draft[] {
     { text: "new here? tour takes 20 seconds · browse opens the page view", tone: "accent" },
     { text: "" },
     { text: "identity", tone: "gold" },
-    { text: "  whoami · status · bio · stack · projects", tone: "foam" },
+    { text: "  whoami · status · bio · stack · projects · tools", tone: "foam" },
     { text: "" },
     { text: "content", tone: "gold" },
     { text: "  blogs · blog <slug> · announcements · contact", tone: "foam" },
@@ -1487,6 +1500,78 @@ function volumeCommand(args: string[], ctx: Ctx): Draft[] {
       tone: "dim",
     },
   ];
+}
+
+function listTools(): Draft[] {
+  const tools = site.tools ?? [];
+  const lines: Draft[] = [
+    {
+      text: `tools  (${tools.length})  ·  click a row for the full story`,
+      tone: "bright",
+    },
+    { text: "" },
+  ];
+  const w = Math.max(...tools.map((t) => t.category.length));
+  for (const t of tools) {
+    lines.push({
+      text: `  ${t.category.padEnd(w)}  ${t.name}`,
+      tone: "gold",
+      action: `tool ${t.name}`,
+    });
+    lines.push({
+      text: `  ${"".padEnd(w + 2, " ")}${t.tagline}`,
+      tone: "muted",
+      action: `tool ${t.name}`,
+    });
+    lines.push({ text: "" });
+  }
+  lines.push({
+    text: 'tip: Tab after "tool " opens a chooser',
+    tone: "dim",
+  });
+  return lines;
+}
+
+type ToolConfig = NonNullable<typeof site.tools>[number];
+
+function findTool(q: string | undefined): ToolConfig | undefined {
+  if (!q) return undefined;
+  const s = q.toLowerCase();
+  return (site.tools ?? []).find(
+    (t) => t.name.toLowerCase() === s || t.name.toLowerCase().startsWith(s),
+  );
+}
+
+function readTool(q: string | undefined): Draft[] {
+  if (!q) {
+    return [
+      { text: "usage: tool <name>", tone: "gold" },
+      { text: "type tools to list", tone: "dim" },
+    ];
+  }
+  const t = findTool(q);
+  if (!t) {
+    return [
+      { text: `tool not found: ${q}`, tone: "err" },
+      { text: "type tools to list names", tone: "dim" },
+    ];
+  }
+  const lines: Draft[] = [
+    { text: `${t.name}  ·  ${t.category}`, tone: "bright" },
+    { text: `  ${t.tagline}`, tone: "foam" },
+    ...(t.description ? [{ text: `  ${t.description}`, tone: "muted" as const }] : []),
+  ];
+  if (t.tech?.length) {
+    lines.push({ text: `  ${t.tech.join(" · ")}`, tone: "gold" });
+  }
+  if (t.url) {
+    lines.push({ text: `  ${t.url}`, tone: "accent", href: t.url });
+  }
+  if (t.note?.length) {
+    lines.push({ text: "" });
+    for (const n of t.note) lines.push({ text: `  ${n}`, tone: "dim" });
+  }
+  return lines;
 }
 
 function listBlogs(blogs: ContentItem[]): Draft[] {

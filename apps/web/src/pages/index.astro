@@ -34,7 +34,12 @@ const description = bioSummary(site);
           ? `Projects: ${site.projects.map((p) => `${p.name} — ${p.description}`).join(" ")}`
           : ""
       }
-      Commands: help, tour, browse, whoami, projects, blogs, contact, theme
+      {
+        site.tools?.length
+          ? `Daily tools: ${site.tools.map((t) => `${t.name} (${t.category})`).join(", ")}.`
+          : ""
+      }
+      Commands: help, tour, browse, whoami, projects, tools, blogs, contact, theme
       list. Blog index at /blog.
     </p>
     <nav class="sr-only" aria-label="Site">

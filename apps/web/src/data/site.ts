@@ -75,4 +75,48 @@ export const site: SiteConfig = {
       tech: ["rust", "leptos", "axum", "tailwind"],
     },
   ],
+  tools: [
+    {
+      name: "macOS",
+      category: "os",
+      tagline: "daily driver — silicon, native apps, fast terminal I/O",
+      url: "https://www.apple.com/macos/",
+    },
+    {
+      name: "ghostty",
+      category: "terminal",
+      tagline: "fast, feature-rich terminal emulator — platform-native UI, GPU acceleration",
+      url: "https://github.com/ghostty-org/ghostty",
+      tech: ["zig", "gpu", "macos"],
+    },
+    {
+      name: "herdr",
+      category: "multiplexer",
+      tagline: "terminal multiplexer — workspaces, tabs, split panes, spawn agents",
+      url: "https://github.com/ahmedragab20/herdr",
+      tech: ["cli", "tui", "terminal"],
+      note: ["dotfiles: keybindings, theme, prefix actions"],
+    },
+    {
+      name: "neovim",
+      category: "editor",
+      tagline: "my editor — lazy.nvim config, lua, keyboard-driven",
+      url: "https://github.com/ahmedragab20/nvim-config",
+      tech: ["lua", "neovim", "lazy.nvim"],
+    },
+    {
+      name: "pi",
+      category: "agent",
+      tagline: "the coding agent harness this site is built with — my ~/.pi setup",
+      url: "https://github.com/ahmedragab20/pi",
+      tech: ["typescript", "cli", "mcp", "diffing"],
+      note: [
+        "how diffing is wired in",
+        "plan   · implementation plans get human approval before any code",
+        "review · every change set opens a review UI with inline comments",
+        "finish · human handoff → agent applies the requested edits",
+        "mcp    · 37-tool diffing server — the review loop is core, not an add-on",
+      ],
+    },
+  ],
 };

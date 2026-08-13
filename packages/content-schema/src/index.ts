@@ -63,6 +63,20 @@ export const SiteConfigSchema = z.object({
       }),
     )
     .optional(),
+  tools: z
+    .array(
+      z.object({
+        name: z.string(),
+        category: z.string(),
+        tagline: z.string(),
+        description: z.string().optional(),
+        url: z.string().optional(),
+        tech: z.array(z.string()).optional(),
+        /** Detail lines — e.g. the diffing-integration block on the pi entry. */
+        note: z.array(z.string()).optional(),
+      }),
+    )
+    .optional(),
 });
 export type SiteConfig = z.infer<typeof SiteConfigSchema>;
 
