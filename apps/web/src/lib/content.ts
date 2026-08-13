@@ -17,6 +17,7 @@ export async function loadTerminalContent(): Promise<{
     slug: entry.id.replace(/\.(md|mdx)$/, ""),
     title: entry.data.title,
     date: entry.data.date,
+    updated: entry.data.updated,
     excerpt: entry.data.excerpt ?? entry.data.description,
     tags: entry.data.tags ?? [],
     body: entry.body ?? "",
@@ -39,11 +40,6 @@ export function withoutBodies(items: ContentItem[]): ContentItem[] {
 }
 
 /** Keep a single post body (boot mode) — strip the rest. */
-export function withOnlyBody(
-  items: ContentItem[],
-  slug: string,
-): ContentItem[] {
-  return items.map((item) =>
-    item.slug === slug ? item : { ...item, body: undefined },
-  );
+export function withOnlyBody(items: ContentItem[], slug: string): ContentItem[] {
+  return items.map((item) => (item.slug === slug ? item : { ...item, body: undefined }));
 }

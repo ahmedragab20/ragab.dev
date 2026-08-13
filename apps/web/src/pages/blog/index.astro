@@ -2,20 +2,31 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { TerminalApp } from "../../components/TerminalApp";
 import { loadTerminalContent, withoutBodies } from "../../lib/content";
+import { blogLd, type BlogMeta } from "../../lib/seo";
+import { site } from "../../data/site";
 
 export const prerender = true;
 
 const { blogs, announcements } = await loadTerminalContent();
 const leanBlogs = withoutBodies(blogs);
 const leanAnnouncements = withoutBodies(announcements);
+const metas: BlogMeta[] = blogs.map(({ slug, title, date, updated, excerpt, tags }) => ({
+  slug,
+  title,
+  date,
+  updated,
+  excerpt,
+  tags,
+}));
 ---
 
 <BaseLayout
-  title="blogs — ragab.dev"
+  title="Blog — Ahmed Ragab"
   description="Writing and notes from Ahmed Ragab"
   path="/blog"
+  jsonLd={blogLd(metas, site)}
 >
-  <main id="terminal" style="height: 100%">
+  <main id="content" style="height: 100%">
     <h1 class="sr-only">Blog</h1>
     <nav class="sr-only" aria-label="Posts">
       <ul>

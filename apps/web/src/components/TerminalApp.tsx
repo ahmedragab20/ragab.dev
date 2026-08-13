@@ -47,11 +47,15 @@ import {
   tokenizeInput,
   type CompletionResult,
 } from "../lib/suggest";
+import { announce, focusEl } from "../lib/a11y";
+import { isCoarseOrNarrow, loadUiMode, persistUiMode, type UiMode } from "../lib/uiMode";
+import { BrowseApp } from "./BrowseApp";
 
 export type ContentItem = {
   slug: string;
   title: string;
   date: string;
+  updated?: string;
   excerpt?: string;
   tags?: string[];
   pinned?: boolean;
@@ -65,6 +69,10 @@ export type TerminalAppProps = {
   blogs: ContentItem[];
   announcements: ContentItem[];
   boot?: TerminalBoot;
+};
+
+type TerminalInnerProps = TerminalAppProps & {
+  onOpenBrowse: () => void;
 };
 
 type TextEntry = {
@@ -176,13 +184,14 @@ function buildBootLines(boot: TerminalBoot, blogs: ContentItem[], themeName: str
         text: "▸ contact    email · github · x · linkedin",
         action: "contact",
       },
+      { text: "▸ browse     page view (default)", action: "browse" },
       { text: "" },
       {
         text: `theme: ${themeName}  ·  ${themeNames.length} palettes`,
         tone: "dim",
       },
       {
-        text: "tip: click a row, or just type — Tab completes · tour for a walkthrough",
+        text: "tip: type browse for the page view · Tab completes · tour for a walkthrough",
         tone: "accent",
       },
       { text: "" },
@@ -194,7 +203,12 @@ function buildBootLines(boot: TerminalBoot, blogs: ContentItem[], themeName: str
   return [{ text: `blog ${boot.slug}`, echo: true }, ...readBlog(boot.slug, blogs), { text: "" }];
 }
 
-function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: TerminalAppProps) {
+function TerminalInner({
+  blogs,
+  announcements,
+  boot = { mode: "home" },
+  onOpenBrowse,
+}: TerminalInnerProps) {
   const { theme, activeTheme, setTheme, previewTheme, cancelPreview, randomTheme, resetTheme } =
     useTheme();
   const { toast } = useToast();
@@ -305,7 +319,7 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
 
   const focusPrompt = useCallback(() => {
     cancelPreview();
-    inputRef.current?.focus();
+    focusEl(inputRef.current);
   }, [cancelPreview]);
 
   const push = useCallback((entries: Draft[]) => {
@@ -470,9 +484,11 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
     scroll();
   }, [lines, scroll]);
 
-  // Focus prompt after mount (boot buffer already SSR'd)
+  // Focus prompt after mount on fine pointers only — coarse (iOS) would
+  // open the keyboard + trigger zoom and make the first paint feel dizzy.
   useEffect(() => {
-    inputRef.current?.focus();
+    if (isCoarseOrNarrow()) return;
+    focusEl(inputRef.current);
   }, []);
 
   // Auto-copy on select in output
@@ -518,9 +534,11 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isEditableTarget(e.target) && e.target !== inputRef.current) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('[role="listbox"], [role="menu"], [role="dialog"]')) return;
       // Interactive controls (row buttons, links) own their Enter — don't
       // yank focus to the prompt before their native activation fires.
-      if (e.key === "Enter" && (e.target as HTMLElement).closest?.("button, a")) return;
+      if (e.key === "Enter" && target?.closest?.("button, a")) return;
 
       const input = inputRef.current;
       if (!input) return;
@@ -593,10 +611,16 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
       histIdx.current = -1;
       draft.current = "";
 
-      push([{ text: input, echo: true }]);
-
       const [cmd, ...args] = input.split(/\s+/);
       const key = (cmd ?? "").toLowerCase();
+      if (key === "browse") {
+        haptics.nav();
+        onOpenBrowse();
+        return;
+      }
+
+      push([{ text: input, echo: true }]);
+
       const out = handleCommand(key, args, {
         blogs,
         announcements,
@@ -634,6 +658,7 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
       closeMenu,
       focusFirstOption,
       focusPrompt,
+      onOpenBrowse,
       push,
       randomTheme,
       resetTheme,
@@ -819,9 +844,10 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
     <Shell
       fill
       onClick={(e) => {
-        // Don't steal focus from links/buttons inside output
         const t = e.target as HTMLElement;
         if (t.closest("a, button, input, textarea, select")) return;
+        // Touch: only focus when the prompt row itself is tapped
+        if (isCoarseOrNarrow() && !t.closest(".ragab-prompt-wrap")) return;
         focusPrompt();
       }}
     >
@@ -833,21 +859,34 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
         }
         badge={activeTheme}
         actions={
-          <button
-            type="button"
-            className="ragab-settings-btn"
-            aria-label="Open settings"
-            onClick={(e) => {
-              e.stopPropagation();
-              run("settings");
-              focusPrompt();
-            }}
-          >
-            set
-          </button>
+          <>
+            <button
+              type="button"
+              className="ragab-settings-btn"
+              aria-label="Exit terminal — open browse mode"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenBrowse();
+              }}
+            >
+              browse
+            </button>
+            <button
+              type="button"
+              className="ragab-settings-btn"
+              aria-label="Open settings"
+              onClick={(e) => {
+                e.stopPropagation();
+                run("settings");
+                focusPrompt();
+              }}
+            >
+              set
+            </button>
+          </>
         }
       />
-      <Output ref={outputRef}>
+      <Output ref={outputRef} aria-label="Terminal output">
         {lines.map((l) =>
           l.kind === "prose" ? (
             <article key={l.id} className="ragab-article">
@@ -940,6 +979,7 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
       </Output>
       <div className="ragab-prompt-wrap">
         <CompletionMenu
+          id="ragab-completion"
           open={menuOpen}
           title={menuResult?.title}
           items={menuResult?.items ?? []}
@@ -948,6 +988,10 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
           onSelect={selectCompletionStable}
           onClose={closeMenu}
         />
+        <p id="ragab-cmd-help" className="sr-only">
+          Type a command and press Enter. Tab opens completions. Arrow keys move through history or
+          the completion menu. Escape closes menus or returns focus to the prompt.
+        </p>
         <PromptRow
           vimMode={settings.vim ? vimMode : null}
           tokens={inputTokens}
@@ -970,6 +1014,11 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
             },
             onKeyDown,
             readOnly: settings.vim && vimMode === "normal",
+            "aria-describedby": "ragab-cmd-help",
+            "aria-expanded": menuOpen,
+            "aria-controls": "ragab-completion",
+            "aria-activedescendant": menuOpen ? `ragab-completion-opt-${menuIndex}` : undefined,
+            "aria-autocomplete": "list",
           }}
         />
       </div>
@@ -979,6 +1028,7 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
             key={item.cmd}
             type="button"
             className="ragab-dock__btn"
+            aria-label={`Run ${item.label}`}
             onClick={(e) => {
               e.stopPropagation();
               run(item.cmd);
@@ -991,6 +1041,7 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
       </div>
       <Hint
         commands={[
+          "browse",
           "tour",
           "help",
           "blogs",
@@ -1008,11 +1059,44 @@ function TerminalInner({ blogs, announcements, boot = { mode: "home" } }: Termin
 }
 
 export function TerminalApp(props: TerminalAppProps) {
+  const boot = props.boot ?? { mode: "home" as const };
+  const forceTerminal = boot.mode !== "home";
+  // null until layout: avoid painting the wrong mode before localStorage.
+  const [mode, setMode] = useState<UiMode | null>(forceTerminal ? "terminal" : null);
+
+  useLayoutEffect(() => {
+    if (forceTerminal) {
+      setMode("terminal");
+      return;
+    }
+    setMode(loadUiMode());
+  }, [forceTerminal]);
+
+  const setUiMode = useCallback((next: UiMode) => {
+    persistUiMode(next);
+    setMode(next);
+    announce(next === "browse" ? "Browse mode" : "Terminal mode");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (next === "browse") {
+          focusEl(document.getElementById("browse-name"));
+          return;
+        }
+        if (isCoarseOrNarrow()) return;
+        focusEl(document.querySelector<HTMLInputElement>(".ragab-input"));
+      });
+    });
+  }, []);
+
   return (
     <ThemeProvider>
       <ToastProvider>
-        <div className="ragab-shell-stage">
-          <TerminalInner {...props} />
+        <div className="ragab-shell-stage" data-ui-mode={mode ?? undefined}>
+          {mode === null ? null : mode === "browse" ? (
+            <BrowseApp blogs={props.blogs} onOpenTerminal={() => setUiMode("terminal")} />
+          ) : (
+            <TerminalInner {...props} boot={boot} onOpenBrowse={() => setUiMode("browse")} />
+          )}
         </div>
       </ToastProvider>
     </ThemeProvider>
@@ -1155,6 +1239,7 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
     case "ls":
       return [
         "tour",
+        "browse",
         "whoami",
         "status",
         "bio",
@@ -1191,7 +1276,10 @@ function handleCommand(key: string, args: string[], ctx: Ctx): Draft[] | null {
     default:
       return [
         { text: `command not found: ${key}`, tone: "err" },
-        { text: "help for commands · tour for a walkthrough", tone: "dim" },
+        {
+          text: "help for commands · browse for the page view · tour for a walkthrough",
+          tone: "dim",
+        },
       ];
   }
 }
@@ -1223,7 +1311,7 @@ function tourLines(): Draft[] {
     }),
     { text: "" },
     {
-      text: "power moves: Tab = chooser · ↑↓ = history · click rows to run · ctrl+l clears",
+      text: "power moves: Tab = chooser · ↑↓ = history · browse opens the page view · ctrl+l clears",
       tone: "dim",
     },
   ];
@@ -1232,7 +1320,7 @@ function tourLines(): Draft[] {
 function helpLines(settings: ShellSettings): Draft[] {
   return [
     { text: "ragab.dev — classic terminal", tone: "bright" },
-    { text: "new here? tour takes 20 seconds", tone: "accent" },
+    { text: "new here? tour takes 20 seconds · browse opens the page view", tone: "accent" },
     { text: "" },
     { text: "identity", tone: "gold" },
     { text: "  whoami · status · bio · stack · projects", tone: "foam" },
@@ -1249,7 +1337,7 @@ function helpLines(settings: ShellSettings): Draft[] {
     },
     { text: "" },
     { text: "shell", tone: "gold" },
-    { text: "  clear · ls · neofetch · help · Tab = chooser", tone: "foam" },
+    { text: "  browse · clear · ls · neofetch · help · Tab = chooser", tone: "foam" },
     { text: "" },
     {
       text: `vim: ${settings.vim ? "on (esc=normal, i=insert)" : "off"} · haptics: ${

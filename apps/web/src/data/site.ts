@@ -8,7 +8,7 @@ export const site: SiteConfig = {
   status: "Available",
   bio: [
     "I build AI-integrated developer tools and fast, honest web systems.",
-    "Software engineer at Foodics — Frontend, Backend, Releases. 6+ years on the web",
+    "Fullstack engineer at Foodics — 7+ years on the web",
   ],
   stack: [
     "languages   typescript · go · rust · php",
@@ -25,10 +25,10 @@ export const site: SiteConfig = {
   },
   experience: [
     {
-      role: "Software Engineer",
-      org: "Foodics",
+      role: "Fullstack Engineer",
+      org: "Foodics Pay",
       period: "2024 — now",
-      note: "crafting UIs, orchestrating pipelines, managing releases",
+      note: "FinTech. Resturnats management. Financial services. Fullstack",
     },
     {
       role: "Senior Frontend Engineer",

@@ -23,6 +23,8 @@ export type CompletionMenuProps = {
   onSelect: (item: CompletionItem) => void;
   onClose: () => void;
   className?: string;
+  /** Listbox id; options use `${id}-opt-${i}` for aria-activedescendant. */
+  id?: string;
 };
 
 export function CompletionMenu({
@@ -34,6 +36,7 @@ export function CompletionMenu({
   onSelect,
   onClose,
   className,
+  id = "ragab-completion",
 }: CompletionMenuProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
@@ -47,6 +50,7 @@ export function CompletionMenu({
 
   return (
     <div
+      id={id}
       className={cx("ragab-completion", className)}
       role="listbox"
       aria-label={title}
@@ -55,9 +59,7 @@ export function CompletionMenu({
     >
       <div className="ragab-completion__head">
         <span className="ragab-completion__title">{title}</span>
-        <span className="ragab-completion__meta">
-          {items.length} · ↑↓ enter esc
-        </span>
+        <span className="ragab-completion__meta">{items.length} · ↑↓ enter esc</span>
         <button
           type="button"
           className="ragab-completion__close"
@@ -71,6 +73,7 @@ export function CompletionMenu({
         {items.map((item, i) => (
           <button
             key={`${item.value}-${i}`}
+            id={`${id}-opt-${i}`}
             ref={i === activeIndex ? activeRef : undefined}
             type="button"
             role="option"
@@ -84,12 +87,8 @@ export function CompletionMenu({
             onClick={() => onSelect(item)}
           >
             <span className="ragab-completion__label">{item.label}</span>
-            {item.detail ? (
-              <span className="ragab-completion__detail">{item.detail}</span>
-            ) : null}
-            {item.run ? (
-              <span className="ragab-completion__run">↵</span>
-            ) : null}
+            {item.detail ? <span className="ragab-completion__detail">{item.detail}</span> : null}
+            {item.run ? <span className="ragab-completion__run">↵</span> : null}
           </button>
         ))}
       </div>

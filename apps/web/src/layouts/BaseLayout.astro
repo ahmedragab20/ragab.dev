@@ -2,6 +2,7 @@
 import "@ragab/themes/css";
 import "../styles/global.css";
 import { site } from "../data/site";
+import { twitterHandle, toISO } from "../lib/seo";
 
 interface Props {
   title?: string;
@@ -10,17 +11,47 @@ interface Props {
   path?: string;
   /** Open Graph type */
   ogType?: "website" | "article";
+  /** Set to hide the page from crawlers (e.g. drafts). */
+  noindex?: boolean;
+  /** OG image URL — reserved for a future og:image; nothing emits one today. */
+  image?: string;
+  /** Article metadata, used when ogType="article". */
+  article?: {
+    published: string;
+    modified?: string;
+    tags?: string[];
+    section?: string;
+  };
+  /** JSON-LD nodes (single object or array); wrapped in a @graph. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const {
-  title = "ragab.dev",
+  title = `${site.name} — ${site.role}`,
   description = `${site.name} · ${site.role} · classic terminal personal site`,
   path = Astro.url.pathname,
   ogType = "website",
+  noindex = false,
+  image,
+  article,
+  jsonLd,
 } = Astro.props;
 
 const canonical = new URL(path, Astro.site ?? "https://ragab.dev").href;
 const siteName = "ragab.dev";
+const handle = twitterHandle(site);
+const publishedISO = toISO(article?.published);
+const modifiedISO = toISO(article?.modified);
+
+const jsonLdNodes = jsonLd
+  ? Array.isArray(jsonLd)
+    ? jsonLd
+    : [jsonLd]
+  : [];
+const jsonLdGraph = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": jsonLdNodes,
+});
 ---
 
 <!doctype html>
@@ -56,19 +87,38 @@ const siteName = "ragab.dev";
             root.dataset.suggest = s.suggest === false ? "0" : "1";
             root.dataset.autocopy = s.autoCopy === false ? "0" : "1";
           }
+          // UI mode (terminal | browse) — browse is the default on all devices
+          var mode = localStorage.getItem("ragab.dev.uiMode");
+          if (mode !== "terminal" && mode !== "browse") {
+            mode = "browse";
+          }
+          root.dataset.uiMode = mode;
         } catch (e) {}
       })();
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="author" content={site.name} />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#191724" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="robots" content={noindex ? "noindex,follow" : "index,follow"} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="ragab.dev blog"
+      href="/rss.xml"
+    />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
@@ -77,11 +127,35 @@ const siteName = "ragab.dev";
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content="en_US" />
+    {image && <meta property="og:image" content={image} />}
+    {image && <meta property="og:image:width" content="1200" />}
+    {image && <meta property="og:image:height" content="630" />}
+    {image && <meta property="og:image:alt" content={title} />}
+    {ogType === "article" && publishedISO && (
+      <meta property="article:published_time" content={publishedISO} />
+    )}
+    {ogType === "article" && modifiedISO && (
+      <meta property="article:modified_time" content={modifiedISO} />
+    )}
+    {ogType === "article" && <meta property="article:author" content={site.name} />}
+    {ogType === "article" && article?.section && (
+      <meta property="article:section" content={article.section} />
+    )}
+    {ogType === "article" &&
+      article?.tags?.map((tag) => <meta property="article:tag" content={tag} />)}
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    {handle && <meta name="twitter:site" content={handle} />}
+    {handle && <meta name="twitter:creator" content={handle} />}
+    {image && <meta name="twitter:image" content={image} />}
+    {image && <meta name="twitter:image:alt" content={title} />}
+
+    {jsonLdNodes.length > 0 && (
+      <script is:inline type="application/ld+json" set:html={jsonLdGraph} />
+    )}
 
     {/* JetBrains Mono — primary UI font (self-hosted, no Google CDN) */}
     <link
@@ -121,11 +195,11 @@ const siteName = "ragab.dev";
         src: url("/fonts/jetbrains-mono-bold.woff2") format("woff2");
       }
     </style>
-
-    <title>{title}</title>
   </head>
   <body>
-    <a class="skip-link" href="#terminal">Skip to terminal</a>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <div id="ragab-a11y-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="ragab-a11y-alert" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
     <slot />
   </body>
 </html>

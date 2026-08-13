@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 /** Default keywords highlighted in command output (shell-like, minimal). */
 const DEFAULT_COMMANDS = [
   "help",
+  "browse",
   "whoami",
   "status",
   "bio",

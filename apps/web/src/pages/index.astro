@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { TerminalApp } from "../components/TerminalApp";
 import { site } from "../data/site";
 import { loadTerminalContent, withoutBodies } from "../lib/content";
+import { bioSummary, personLd, websiteLd } from "../lib/seo";
 
 export const prerender = true;
 
@@ -10,14 +11,16 @@ const { blogs, announcements } = await loadTerminalContent();
 // Meta only on the home island — full bodies live on /blog/[slug]
 const leanBlogs = withoutBodies(blogs);
 const leanAnnouncements = withoutBodies(announcements);
+const description = bioSummary(site);
 ---
 
 <BaseLayout
-  title="ragab.dev — terminal"
-  description={`${site.name} · ${site.role} · ${site.location}. ${site.bio[0] ?? ""}`}
+  title={`${site.name} — ${site.role}`}
+  description={description}
   path="/"
+  jsonLd={[personLd(site), websiteLd(site)]}
 >
-  <main id="terminal" style="height: 100%">
+  <main id="content" style="height: 100%">
     <h1 class="sr-only">{site.name} — {site.role}</h1>
     <p class="sr-only">
       {site.bio.join(" ")}
@@ -31,8 +34,8 @@ const leanAnnouncements = withoutBodies(announcements);
           ? `Projects: ${site.projects.map((p) => `${p.name} — ${p.description}`).join(" ")}`
           : ""
       }
-      Commands: help, tour, whoami, projects, blogs, contact, theme list. Blog
-      index at /blog.
+      Commands: help, tour, browse, whoami, projects, blogs, contact, theme
+      list. Blog index at /blog.
     </p>
     <nav class="sr-only" aria-label="Site">
       <ul>

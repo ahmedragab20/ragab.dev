@@ -4,6 +4,7 @@ import type { CompletionItem } from "@ragab/ui";
 export const COMMANDS = [
   "help",
   "tour",
+  "browse",
   "whoami",
   "status",
   "bio",
@@ -340,6 +341,7 @@ function commandDetail(n: string): string {
   const map: Record<string, string> = {
     help: "commands",
     tour: "walkthrough",
+    browse: "page view",
     whoami: "identity",
     status: "availability",
     bio: "about",
@@ -364,7 +366,7 @@ function commandTone(n: string): CompletionItem["tone"] {
   if (n === "blog" || n === "blogs") return "foam";
   if (n === "theme") return "gold";
   if (n === "volume") return "gold";
-  if (n === "contact" || n === "tour") return "accent";
+  if (n === "contact" || n === "tour" || n === "browse") return "accent";
   if (n === "clear") return "love";
   if (n === "help") return "bright";
   return "default";

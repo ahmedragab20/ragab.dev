@@ -6,6 +6,8 @@ import {
   withOnlyBody,
   withoutBodies,
 } from "../../lib/content";
+import { blogPostingLd } from "../../lib/seo";
+import { site } from "../../data/site";
 
 export const prerender = true;
 
@@ -18,25 +20,30 @@ export async function getStaticPaths() {
       title: post.title,
       excerpt: post.excerpt,
       date: post.date,
+      updated: post.updated,
+      tags: post.tags,
       body: post.body ?? "",
     },
   }));
 }
 
-const { slug, title, excerpt, date, body } = Astro.props;
+const { slug, title, excerpt, date, updated, tags, body } = Astro.props;
 const { blogs, announcements } = await loadTerminalContent();
 // Only this post carries a body into the island
 const leanBlogs = withOnlyBody(blogs, slug);
 const leanAnnouncements = withoutBodies(announcements);
+const postMeta = { slug, title: title ?? slug, date, updated, excerpt, tags };
 ---
 
 <BaseLayout
-  title={`${title ?? slug} — ragab.dev`}
+  title={`${title ?? slug} — Ahmed Ragab`}
   description={excerpt ?? "Blog post"}
   path={`/blog/${slug}`}
   ogType="article"
+  article={{ published: date, modified: updated, tags, section: tags?.[0] }}
+  jsonLd={blogPostingLd(postMeta, site)}
 >
-  <main id="terminal" style="height: 100%">
+  <main id="content" style="height: 100%">
     <TerminalApp
       client:idle={{ timeout: 200 }}
       blogs={leanBlogs}

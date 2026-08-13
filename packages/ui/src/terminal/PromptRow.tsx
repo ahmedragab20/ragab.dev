@@ -52,25 +52,18 @@ export function PromptRow({
       {vimMode ? (
         <button
           type="button"
-          className={cx(
-            "ragab-vim-badge",
-            vimMode === "normal" && "ragab-vim-badge--normal",
-          )}
+          className={cx("ragab-vim-badge", vimMode === "normal" && "ragab-vim-badge--normal")}
           aria-label={
             vimMode === "normal"
               ? "Vim normal mode — activate for insert"
               : "Vim insert mode — activate for normal"
           }
           title={
-            vimMode === "normal"
-              ? "vim normal — click for insert"
-              : "vim insert — click for normal"
+            vimMode === "normal" ? "vim normal — click for insert" : "vim insert — click for normal"
           }
           onClick={(e) => {
             e.stopPropagation();
-            document.dispatchEvent(
-              new CustomEvent("ragab:vim-toggle", { bubbles: true }),
-            );
+            document.dispatchEvent(new CustomEvent("ragab:vim-toggle", { bubbles: true }));
           }}
         >
           <span aria-hidden="true">{vimMode === "normal" ? "N" : "I"}</span>
@@ -84,9 +77,7 @@ export function PromptRow({
                 <span
                   key={`${i}-${t.kind}-${t.text}`}
                   className={
-                    t.kind === "space"
-                      ? undefined
-                      : `ragab-input-tok ragab-input-tok--${t.kind}`
+                    t.kind === "space" ? undefined : `ragab-input-tok ragab-input-tok--${t.kind}`
                   }
                 >
                   {t.text}
@@ -117,8 +108,8 @@ export function PromptRow({
           autoCapitalize="off"
           autoCorrect="off"
           value={value}
-          aria-label={restInput["aria-label"] ?? "Command input"}
           {...restInput}
+          aria-label={restInput["aria-label"] ?? "Command input"}
         />
       </div>
       {suggestion && onAcceptSuggestion ? (

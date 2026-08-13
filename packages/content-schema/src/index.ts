@@ -16,6 +16,8 @@ export const BlogFrontmatterSchema = z.object({
   description: z.string().optional(),
   excerpt: z.string().optional(),
   date: DateStringSchema,
+  /** Last meaningful edit — feeds article:modified_time and RSS lastBuildDate. */
+  updated: DateStringSchema.optional(),
   draft: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -68,6 +70,7 @@ export type SiteConfig = z.infer<typeof SiteConfigSchema>;
 export const TERMINAL_COMMANDS = [
   "help",
   "tour",
+  "browse",
   "whoami",
   "status",
   "bio",
